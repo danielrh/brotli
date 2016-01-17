@@ -7,6 +7,12 @@
 // Brotli bit stream functions to support the low level format. There are no
 // compression algorithms here, just the right ordering of bits to match the
 // specs.
+#ifndef overridable_malloc
+#define overridable_malloc malloc
+#endif
+#ifndef overridable_free
+#define overridable_free free
+#endif
 
 #include "./brotli_bit_stream.h"
 
@@ -363,7 +369,7 @@ void BuildAndStoreHuffmanTreeFast(const uint32_t *histogram,
 
   const size_t max_tree_size = 2 * length + 1;
   HuffmanTree* const tree =
-      static_cast<HuffmanTree*>(malloc(max_tree_size * sizeof(HuffmanTree)));
+      static_cast<HuffmanTree*>(overridable_malloc(max_tree_size * sizeof(HuffmanTree)));
   for (uint32_t count_limit = 1; ; count_limit *= 2) {
     HuffmanTree* node = tree;
     for (size_t i = length; i != 0;) {
@@ -424,7 +430,7 @@ void BuildAndStoreHuffmanTreeFast(const uint32_t *histogram,
       break;
     }
   }
-  free(tree);
+  overridable_free(tree);
   ConvertBitDepthsToSymbols(depth, length, bits);
   if (count <= 4) {
     // value of 1 indicates a simple Huffman code

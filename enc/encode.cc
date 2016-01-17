@@ -5,6 +5,12 @@
 */
 
 // Implementation of Brotli compressor.
+#ifndef overridable_realloc
+#define overridable_realloc realloc
+#endif
+#ifndef overridable_free
+#define overridable_free free
+#endif
 
 #include "./encode.h"
 
@@ -503,7 +509,7 @@ BrotliCompressor::BrotliCompressor(BrotliParams params)
 
 BrotliCompressor::~BrotliCompressor(void) {
   delete[] storage_;
-  free(commands_);
+  overridable_free(commands_);
   delete ringbuffer_;
   delete hashers_;
   delete[] large_table_;
@@ -638,7 +644,7 @@ bool BrotliCompressor::WriteBrotliData(const bool is_last,
     newsize += (bytes / 4) + 16;
     cmd_alloc_size_ = newsize;
     commands_ =
-        static_cast<Command*>(realloc(commands_, sizeof(Command) * newsize));
+        static_cast<Command*>(overridable_realloc(commands_, sizeof(Command) * newsize));
   }
 
   CreateBackwardReferences(bytes, WrapPosition(last_processed_pos_),

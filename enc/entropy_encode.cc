@@ -5,7 +5,12 @@
 */
 
 // Entropy encoding (Huffman) utilities.
-
+#ifndef overridable_free
+#define overridable_free free
+#ifndef overridable_calloc
+#define overridable_calloc calloc
+#endif
+#endif
 #include "./entropy_encode.h"
 
 #include <algorithm>

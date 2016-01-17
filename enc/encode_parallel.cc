@@ -5,7 +5,12 @@
 */
 
 // Implementation of parallel Brotli compressor.
-
+#ifndef overridable_malloc
+#define overridable_malloc malloc
+#endif
+#ifndef overridable_free
+#define overridable_free free
+#endif
 #include "./encode_parallel.h"
 
 #include <algorithm>
@@ -95,7 +100,7 @@ bool WriteMetaBlockParallel(const BrotliParams& params,
   size_t num_literals = 0;
   int dist_cache[4] = { -4, -4, -4, -4 };
   Command* commands = static_cast<Command*>(
-      malloc(sizeof(Command) * ((input_size + 1) >> 1)));
+      overridable_malloc(sizeof(Command) * ((input_size + 1) >> 1)));
   if (commands == 0) {
     delete hashers;
     return false;
@@ -171,7 +176,7 @@ bool WriteMetaBlockParallel(const BrotliParams& params,
                  commands, num_commands,
                  mb,
                  &storage_ix, &storage[0]);
-  free(commands);
+  overridable_free(commands);
 
   // If this is not the last meta-block, store an empty metadata
   // meta-block so that the meta-block will end at a byte boundary.
