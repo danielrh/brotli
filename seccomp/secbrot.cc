@@ -23,6 +23,22 @@
 #include "Seccomp.hh"
 #include "Zlib0.hh"
 
+const uint8_t header_template[24] = {'b','r',0,'t'};
+
+static bool parseHeader(uint8_t data[sizeof(header_template)],
+                        size_t* outputSize,
+                        bool *zlib0) {
+    *outputSize = 0;
+    *outputSize = data[sizeof(header_template) - 4];
+    *outputSize += 256 * (size_t)data[sizeof(header_template) - 3];
+    *outputSize += 256 * 256 * (size_t)data[sizeof(header_template) - 2];
+    *outputSize += 256 * 256 * 256 * (size_t)data[sizeof(header_template) - 1];
+    if (data[3] == 'z') {
+        *zlib0 = true;
+    }
+    return data[0] == 'b' && data[1] == 'r' && data[2] == 0 && (data[3] == 'z' || data[3] == 't');
+}
+
 template <size_t buf_size> class BrotliFdIn : public brotli::BrotliIn {
     int fd_;
     uint8_t buf_[buf_size];
@@ -113,6 +129,15 @@ bool ParseUint64(const char* s, uint64_t* output) {
     return true;
 }
 
+bool ParseSize(const char* s, size_t* output) {
+    errno = 0;
+    *output = strtoll(s, NULL, 10);
+    if (errno != 0) {
+        return false;
+    }
+    return true;
+}
+
 bool ParseQuality(const char* s, int* quality) {
   if (s[0] >= '0' && s[0] <= '9') {
     *quality = s[0] - '0';
@@ -125,10 +150,14 @@ bool ParseQuality(const char* s, int* quality) {
   return false;
 }
 
+
 static void ParseArgv(int argc, char **argv,
                       char **input_path,
                       char **output_path,
+                      size_t* outputSize,
+                      bool *zlib0,
                       uint64_t* time_bound_ms,
+                      bool *prependHeader,
                       int *force,
                       int *quality,
                       int *decompress,
@@ -145,6 +174,9 @@ static void ParseArgv(int argc, char **argv,
   *lgwin = 22;
   *memory_bound = 1024 * 1024 * 384;
   *time_bound_ms = 0;
+  *zlib0 = false;
+  *outputSize = 0;
+  *prependHeader = false;
   {
     size_t argv0_len = strlen(argv[0]);
     *decompress =
@@ -161,6 +193,19 @@ static void ParseArgv(int argc, char **argv,
         goto error;
       }
       *force = 1;
+      continue;
+    } else if (!strcmp("--zlib0", argv[k]) ||
+        !strcmp("-z", argv[k])) {
+      if (*zlib0 != false) {
+        goto error;
+      }
+      *zlib0 = true;
+      continue;
+    } else if (!strcmp("--header", argv[k])) {
+      if (*prependHeader != false) {
+        goto error;
+      }
+      *prependHeader = true;
       continue;
     } else if (!strcmp("--decompress", argv[k]) ||
                !strcmp("--uncompress", argv[k]) ||
@@ -212,6 +257,13 @@ static void ParseArgv(int argc, char **argv,
         }
         ++k;
         continue;
+      } else if (!strcmp("--size", argv[k]) ||
+                 !strcmp("-s", argv[k])) {
+        if (!ParseSize(argv[k + 1], outputSize)) {
+          goto error;
+        }
+        ++k;
+        continue;
       } else if (!strcmp("--memorymb", argv[k]) ||
                  !strcmp("-t", argv[k])) {
         if (!ParseUint64(argv[k + 1], memory_bound)) {
@@ -240,6 +292,14 @@ static void ParseArgv(int argc, char **argv,
       }
     }
     goto error;
+  }
+  if (*zlib0 && ((!*decompress) || ((!*prependHeader) && !*outputSize))) {
+      fprintf(stderr, "If --zlib0 specified, so must also decompress and the output size\n");
+      goto error;
+  }
+  if (*prependHeader && ((!*decompress) && !*outputSize)) {
+      fprintf(stderr, "If --header specified, so must also specify output size\n");
+      goto error;
   }
   return;
 error:
@@ -368,6 +428,38 @@ void print_memory_stats() {
     while (write(2, cursor, strlen(cursor)) < 0 && errno == EINTR) {
     }
 }
+uint8_t parse_hex(char v) {
+    if (v <= '9' && v >= '0') {
+        return v - '0';
+    }
+    if (v <= 'f' && v >= 'a') {
+        return v - 'a' + 10;
+    }
+    if (v <= 'F' && v >= 'A') {
+        return v - 'A' + 10;
+    }
+    return 0;
+}
+bool writeHeader(size_t size, brotli::BrotliOut&output) {
+    unsigned char header_bin[sizeof(header_template)];
+    memcpy(header_bin, header_template, sizeof(header_template));
+    unsigned int magic_number_size = 4;
+    unsigned int uncompressed_size_size = 4;
+    header_bin[sizeof(header_bin) - 4] = (size & 255);
+    header_bin[sizeof(header_bin) - 3] = ((size >> 8) & 255);
+    header_bin[sizeof(header_bin) - 2] = ((size >> 16) & 255);
+    header_bin[sizeof(header_bin) - 1] = ((size >> 32) & 255);
+
+    for (int i = 0;
+         revision[i * 2]
+             && revision[i * 2 + 1]
+             && i < sizeof(header_bin) - magic_number_size - uncompressed_size_size;
+         ++i) {
+        header_bin[magic_number_size + i]
+            = 16 * parse_hex(revision[i * 2]) + parse_hex(revision[i * 2 + 1]);
+    }
+    return output.Write(header_bin, sizeof(header_bin));
+}
 
 int main(int argc, char** argv) {
   char *input_path = 0;
@@ -378,12 +470,14 @@ int main(int argc, char** argv) {
   int repeat = 1;
   int verbose = 0;
   int lgwin = 0;
-  size_t outputSize = 0;
   uint64_t time_bound_ms = 0;
   uint64_t memory_bound = 0;
   int enforce_jail = 0;
-  ParseArgv(argc, argv, &input_path, &output_path, &time_bound_ms,
-            &force, &quality, &decompress, &repeat, &verbose, &lgwin,
+  bool doZlib0 = false;
+  bool prependHeader = false;
+  size_t outputSize = 0;
+  ParseArgv(argc, argv, &input_path, &output_path, &outputSize, &doZlib0, &time_bound_ms,
+            &prependHeader, &force, &quality, &decompress, &repeat, &verbose, &lgwin,
             &enforce_jail,
             &memory_bound);
   Sirikata::memmgr_init(memory_bound, 0, 0);
@@ -406,7 +500,32 @@ int main(int argc, char** argv) {
         custom_exit(ExitCode::JAIL_NOT_STARTED);
     }
     if (decompress) {
-      Decompress(brotli_in, brotli_out);
+      if (prependHeader) {
+          const size_t header_size = 24;
+          size_t n = 0;
+          uint8_t header[header_size];
+          while (n < header_size) {
+              size_t tmp = 0;
+              const uint8_t * data = (const uint8_t *)brotli_in.Read(header_size - n,
+                                                                     &tmp);
+              if (tmp == 0) {
+                  custom_exit(ExitCode::STREAM_INCONSISTENT);
+              }
+              memcpy(header + n, data, tmp);
+              n += tmp;
+         }
+          parseHeader(header, &outputSize, &doZlib0);
+      }
+      if (doZlib0) {
+        Sirikata::Zlib0Writer zwr(&brotli_out, 0);
+        zwr.setFullFileSize(outputSize);
+        Decompress(brotli_in, zwr);
+        bool ret = zwr.Sync();
+        (void)ret;
+        assert(ret);
+      } else {
+        Decompress(brotli_in, brotli_out);
+      }
       if (jailed) {
         if (verbose) {
           print_memory_stats();
@@ -418,6 +537,9 @@ int main(int argc, char** argv) {
       params.lgwin = lgwin;
       params.quality = quality;
       try {
+        if (prependHeader) {
+            writeHeader(outputSize, brotli_out);
+        }
         if (!BrotliCompress(params, &brotli_in, &brotli_out)) {
           fprintf(stderr, "compression failed\n");
           if (!jailed) {
