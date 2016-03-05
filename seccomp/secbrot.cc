@@ -166,6 +166,7 @@ static void ParseArgv(int argc, char **argv,
                       int *lgwin,
                       int *enforce_jail,
                       uint64_t *memory_bound) {
+  bool outputSizeSet = false;
   *force = 0;
   *input_path = 0;
   *output_path = 0;
@@ -262,6 +263,7 @@ static void ParseArgv(int argc, char **argv,
         if (!ParseSize(argv[k + 1], outputSize)) {
           goto error;
         }
+        outputSizeSet = true;
         ++k;
         continue;
       } else if (!strcmp("--memorymb", argv[k]) ||
@@ -293,11 +295,11 @@ static void ParseArgv(int argc, char **argv,
     }
     goto error;
   }
-  if (*zlib0 && ((!*decompress) || ((!*prependHeader) && !*outputSize))) {
+  if (*zlib0 && ((!*decompress) || ((!*prependHeader) && !outputSizeSet))) {
       fprintf(stderr, "If --zlib0 specified, so must also decompress and the output size\n");
       goto error;
   }
-  if (*prependHeader && ((!*decompress) && !*outputSize)) {
+  if (*prependHeader && ((!*decompress) && !outputSizeSet)) {
       fprintf(stderr, "If --header specified, so must also specify output size\n");
       goto error;
   }
