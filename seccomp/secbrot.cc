@@ -347,6 +347,22 @@ bool Decompress(BrotliFdIn<kFileBufferSize>& fdin, brotli::BrotliOut &fdout) {
   }
   return true;
 }
+void print_memory_stats() {
+    size_t memory = Sirikata::memmgr_size_allocated();
+    char data[] = "XXXXXXXXXXXXXXXXXX bytes allocated\n";
+    char * cursor = data + 18;
+    for (int i = 0; i < 17; ++i) {
+        --cursor;
+        *cursor = '0' + memory % 10;
+        memory /= 10;
+        if (!memory) {
+            break;
+        }
+    }
+    while (write(2, cursor, strlen(cursor)) < 0 && errno == EINTR) {
+    }
+}
+
 int main(int argc, char** argv) {
   char *input_path = 0;
   char *output_path = 0;
@@ -381,7 +397,10 @@ int main(int argc, char** argv) {
     if (decompress) {
       Decompress(brotli_in, brotli_out);
       if (jailed) {
-          custom_exit(ExitCode::SUCCESS);
+        if (verbose) {
+          print_memory_stats();
+        }
+        custom_exit(ExitCode::SUCCESS);
       }
     } else {
       brotli::BrotliParams params;
@@ -403,6 +422,9 @@ int main(int argc, char** argv) {
         custom_exit(ExitCode::OOM);
       }
     }
+    if (verbose) {
+        print_memory_stats();
+    }
     if (jailed) {
         custom_exit(ExitCode::SUCCESS);
     }
@@ -417,18 +439,16 @@ int main(int argc, char** argv) {
       duration = 1e-9;
     }
     int64_t uncompressed_size = FileSize(decompress ? output_path : input_path);
-    if (uncompressed_size == -1) {
-      fprintf(stderr, "failed to determine uncompressed file size\n");
-      exit(1);
-    }
-    double uncompressed_bytes_in_MB =
+    if (uncompressed_size != -1) {
+      double uncompressed_bytes_in_MB =
         (repeat * uncompressed_size) / (1024.0 * 1024.0);
-    if (decompress) {
-      printf("Brotli decompression speed: ");
-    } else {
-      printf("Brotli compression speed: ");
+      if (decompress) {
+        fprintf(stderr, "Brotli decompression speed: ");
+      } else {
+        fprintf(stderr, "Brotli compression speed: ");
+      }
+      fprintf(stderr, "%g MB/s\n", uncompressed_bytes_in_MB / duration);
     }
-    printf("%g MB/s\n", uncompressed_bytes_in_MB / duration);
   }
   return 0;
 }

@@ -201,24 +201,24 @@ void memmgr_print_stats()
 {
     MemMgrState& memmgr = get_local_memmgr();
     (void)memmgr;
-    #ifdef DEBUG_MEMMGR_SUPPORT_STATS
     mem_header_t* p;
 
-    printf("------ Memory manager stats ------\n\n");
-    printf(    "Memmgr.Pool: free_pos = %lu (%lu uint8_ts left)\n\n",
+    fprintf(stderr, "------ Memory manager stats ------\n\n");
+    fprintf(stderr, "Memmgr.Pool: free_pos = %lu (%lu uint8_ts left)\n\n",
             memmgr.pool_free_pos, memmgr.pool_size - memmgr.pool_free_pos);
 
+    #ifdef DEBUG_MEMMGR_SUPPORT_STATS
     p = (mem_header_t*) memmgr.pool;
 
     while (p < (mem_header_t*) (memmgr.pool + memmgr.pool_free_pos))
     {
-        printf(    "  * Addr: 0x%8p; Size: %8lu\n",
+        fprintf(stderr,    "  * Addr: 0x%8p; Size: %8lu\n",
                 p, p->s.size);
 
         p += p->s.size;
     }
 
-    printf("\nFree list:\n\n");
+    fprintf(stderr,"\nFree list:\n\n");
 
     if (memmgr.freep)
     {
@@ -226,7 +226,7 @@ void memmgr_print_stats()
 
         while (1)
         {
-            printf(    "  * Addr: 0x%8p; Size: %8lu; Next: 0x%8p\n",
+            fprintf(stderr,    "  * Addr: 0x%8p; Size: %8lu; Next: 0x%8p\n",
                     p, p->s.size, p->s.next);
 
             p = p->s.next;
@@ -237,10 +237,10 @@ void memmgr_print_stats()
     }
     else
     {
-        printf("Empty\n");
+        fprintf(stderr,"Empty\n");
     }
 
-    printf("\n");
+    fprintf(stderr,"\n");
     #endif // DEBUG_MEMMGR_SUPPORT_STATS
 }
 
