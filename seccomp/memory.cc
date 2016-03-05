@@ -69,7 +69,7 @@ bool g_use_seccomp =
     true
 #endif
     ;
-void * operator new(size_t size, std::nothrow_t const&) {
+void * operator new(size_t size, std::nothrow_t const&) throw() {
  void* ptr = custom_malloc(size); 
  if (ptr == 0) {// did malloc succeed?
      if (!g_use_seccomp) {
@@ -101,10 +101,10 @@ void* operator new[] (size_t size) throw(std::bad_alloc){
  return ptr;
 }
 
-void operator delete(void * ptr, std::nothrow_t const&) {
+void operator delete(void * ptr, std::nothrow_t const&) throw() {
     custom_free(ptr);
 }
-void operator delete[](void * ptr, std::nothrow_t const&) {
+void operator delete[](void * ptr, std::nothrow_t const&) throw() {
     custom_free(ptr);
 }
 void operator delete (void* ptr) throw(){
