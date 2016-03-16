@@ -35,7 +35,7 @@ typedef struct {
 /* Builds Huffman lookup table assuming code lengths are in symbol order. */
 void BrotliBuildCodeLengthsHuffmanTable(HuffmanCode* root_table,
                                         const uint8_t* const code_lengths,
-                                        uint16_t *count);
+                                        const uint16_t *count);
 
 /* Builds Huffman lookup table assuming code lengths are in symbol order. */
 /* Returns size of resulting table. */

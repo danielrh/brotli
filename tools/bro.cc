@@ -178,7 +178,7 @@ int64_t FileSize(char *path) {
   return retval;
 }
 
-static const size_t kFileBufferSize = 65536;
+static const size_t kFileBufferSize = 33;
 
 void Decompresss(FILE* fin, FILE* fout) {
   uint8_t* input = new uint8_t[kFileBufferSize];

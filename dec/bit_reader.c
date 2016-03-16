@@ -21,6 +21,8 @@ void BrotliInitBitReader(BrotliBitReader* const br) {
 }
 
 int BrotliWarmupBitReader(BrotliBitReader* const br) {
+  fprintf(stderr, "enter BrotliWarmupBitReader\n");
+  BrotliPrintBitReaderState(br, 1);
   size_t aligned_read_mask = (sizeof(br->val_) >> 1) - 1;
   /* Fixing alignment after unaligned BrotliFillWindow would result accumulator
      overflow. If unalignment is caused by BrotliSafeReadBits, then there is
@@ -30,6 +32,8 @@ int BrotliWarmupBitReader(BrotliBitReader* const br) {
   }
   if (BrotliGetAvailableBits(br) == 0) {
     if (!BrotliPullByte(br)) {
+      BrotliPrintBitReaderState(br, 0);
+      fprintf(stderr, "BrotliWarmupBitReader return 0\n");
       return 0;
     }
   }
@@ -37,9 +41,13 @@ int BrotliWarmupBitReader(BrotliBitReader* const br) {
   while ((((size_t)br->next_in) & aligned_read_mask) != 0) {
     if (!BrotliPullByte(br)) {
       /* If we consumed all the input, we don't care about the alignment. */
+      BrotliPrintBitReaderState(br, 0);
+      fprintf(stderr, "BrotliWarmupBitReader return 1\n");
       return 1;
     }
   }
+  BrotliPrintBitReaderState(br, 0);
+  fprintf(stderr, "BrotliWarmupBitReader return 1\n");
   return 1;
 }
 

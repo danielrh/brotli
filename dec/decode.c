@@ -775,6 +775,11 @@ Complex: /* Decode Huffman-coded code lengths. */
         BROTLI_LOG(("[ReadHuffmanCode] space = %d\n", s->space));
         return BROTLI_FAILURE();
       }
+      fprintf(stderr, "BrotliBuildHuffmanTable symbol_lists_array : [");
+      for (size_t i = 0; i < sizeof(s->symbols_lists_array) / sizeof(s->symbols_lists_array[0]); ++i) {
+          fprintf(stderr, "%d, ", s->symbols_lists_array[i]);
+      }
+      fprintf(stderr, "]\nsymbol_lists_array_offset %ld\n", s->symbol_lists - s->symbols_lists_array);
       table_size = BrotliBuildHuffmanTable(table, HUFFMAN_TABLE_BITS,
           s->symbol_lists, s->code_length_histo);
       if (opt_table_size) {
