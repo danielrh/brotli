@@ -135,6 +135,7 @@ static void ParseArgv(int argc, char **argv,
                       int *repeat,
                       int *verbose,
                       int *lgwin,
+                      int *enforce_jail,
                       uint64_t *memory_bound) {
   *force = 0;
   *input_path = 0;
@@ -165,6 +166,10 @@ static void ParseArgv(int argc, char **argv,
                !strcmp("--uncompress", argv[k]) ||
                !strcmp("-d", argv[k])) {
       *decompress = 1;
+      continue;
+    } else if (!strcmp("--jailed", argv[k]) ||
+               !strcmp("-j", argv[k])) {
+      *enforce_jail = 1;
       continue;
     } else if (!strcmp("--verbose", argv[k]) ||
                !strcmp("-v", argv[k])) {
@@ -376,8 +381,10 @@ int main(int argc, char** argv) {
   size_t outputSize = 0;
   uint64_t time_bound_ms = 0;
   uint64_t memory_bound = 0;
+  int enforce_jail = 0;
   ParseArgv(argc, argv, &input_path, &output_path, &time_bound_ms,
             &force, &quality, &decompress, &repeat, &verbose, &lgwin,
+            &enforce_jail,
             &memory_bound);
   Sirikata::memmgr_init(memory_bound, 0, 0);
   const clock_t clock_start = clock();
@@ -395,6 +402,9 @@ int main(int argc, char** argv) {
         assert(ret == 0 && "Timer must be able to be set");
     }
     bool jailed = Sirikata::installStrictSyscallFilter(verbose);
+    if (enforce_jail && !jailed) {
+        custom_exit(ExitCode::JAIL_NOT_STARTED);
+    }
     if (decompress) {
       Decompress(brotli_in, brotli_out);
       if (jailed) {
