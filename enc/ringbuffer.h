@@ -17,6 +17,10 @@
 #define overridable_realloc realloc
 #endif
 
+#ifndef overridable_free
+#define overridable_free free
+#endif
+
 namespace brotli {
 
 // A RingBuffer(window_bits, tail_bits) contains `1 << window_bits' bytes of
@@ -41,7 +45,7 @@ class RingBuffer {
         buffer_(0) {}
 
   ~RingBuffer(void) {
-    free(data_);
+    overridable_free(data_);
   }
 
   // Allocates or re-allocates data_ to the given length + plus some slack
