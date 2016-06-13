@@ -856,7 +856,7 @@ void StoreMetaBlock(const uint8_t* input,
       (48u << distance_postfix_bits);
 
   HuffmanTree* tree = static_cast<HuffmanTree*>(
-      malloc(kMaxHuffmanTreeSize * sizeof(HuffmanTree)));
+      overridable_malloc(kMaxHuffmanTreeSize * sizeof(HuffmanTree)));
   BlockEncoder literal_enc(256,
                            mb.literal_split.num_types,
                            mb.literal_split.types,
@@ -1040,7 +1040,7 @@ void StoreMetaBlockTrivial(const uint8_t* input,
   std::vector<uint16_t> dist_bits(64);
 
   HuffmanTree* tree = static_cast<HuffmanTree*>(
-      malloc(kMaxHuffmanTreeSize * sizeof(HuffmanTree)));
+      overridable_malloc(kMaxHuffmanTreeSize * sizeof(HuffmanTree)));
   BuildAndStoreHuffmanTree(&lit_histo.data_[0], 256, tree,
                            &lit_depth[0], &lit_bits[0],
                            storage_ix, storage);

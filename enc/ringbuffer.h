@@ -13,6 +13,9 @@
 
 #include "./port.h"
 #include "./types.h"
+#ifndef overridable_realloc
+#define overridable_realloc realloc
+#endif
 
 namespace brotli {
 
@@ -46,7 +49,7 @@ class RingBuffer {
   inline void InitBuffer(const uint32_t buflen) {
     static const size_t kSlackForEightByteHashingEverywhere = 7;
     cur_size_ = buflen;
-    data_ = static_cast<uint8_t*>(realloc(
+    data_ = static_cast<uint8_t*>(overridable_realloc(
         data_, 2 + buflen + kSlackForEightByteHashingEverywhere));
     buffer_ = data_ + 2;
     buffer_[-2] = buffer_[-1] = 0;
