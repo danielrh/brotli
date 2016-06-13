@@ -18,6 +18,7 @@
 #include <string>
 #include "version.h"
 #include "../dec/decode.h"
+#include "../dec/state.h"
 #include "../enc/encode.h"
 #include "Seccomp.hh"
 #include "Zlib0.hh"
