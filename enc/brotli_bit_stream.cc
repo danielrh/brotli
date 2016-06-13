@@ -905,7 +905,7 @@ void StoreMetaBlock(const uint8_t* input,
                                         storage_ix, storage);
   distance_enc.BuildAndStoreEntropyCodes(mb.distance_histograms, tree,
                                          storage_ix, storage);
-  free(tree);
+  overridable_free(tree);
 
   size_t pos = start_pos;
   for (size_t i = 0; i < n_commands; ++i) {
@@ -1050,7 +1050,7 @@ void StoreMetaBlockTrivial(const uint8_t* input,
   BuildAndStoreHuffmanTree(&dist_histo.data_[0], 64, tree,
                            &dist_depth[0], &dist_bits[0],
                            storage_ix, storage);
-  free(tree);
+  overridable_free(tree);
   StoreDataWithHuffmanCodes(input, start_pos, mask, commands,
                             n_commands, &lit_depth[0], &lit_bits[0],
                             &cmd_depth[0], &cmd_bits[0],
