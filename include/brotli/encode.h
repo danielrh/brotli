@@ -56,7 +56,9 @@ typedef enum BrotliEncoderParameter {
   BROTLI_PARAM_LGWIN = 2,
   /* Base 2 logarithm of the maximum input block size. Range is 16 to 24.
      If set to 0, the value will be set based on the quality. */
-  BROTLI_PARAM_LGBLOCK = 3
+  BROTLI_PARAM_LGBLOCK = 3,
+  /* If quality 9 is specified and this is true, use quality 9.5. */
+  BROTLI_PARAM_USE_95 = 4
 } BrotliEncoderParameter;
 
 /* A state can not be reused for multiple brotli streams. */

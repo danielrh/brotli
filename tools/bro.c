@@ -76,7 +76,8 @@ static void ParseArgv(int argc, char **argv,
                       int *decompress,
                       int *repeat,
                       int *verbose,
-                      int *lgwin) {
+                      int *lgwin,
+                      int *use_95) {
   int k;
   *force = 0;
   *input_path = 0;
@@ -108,6 +109,10 @@ static void ParseArgv(int argc, char **argv,
         goto error;
       }
       *verbose = 1;
+      continue;
+    } else if (!strcmp("--use_9.5", argv[k]) ||
+               !strcmp("--9.5", argv[k])) {
+      *use_95 = BROTLI_TRUE;
       continue;
     }
     if (k < argc - 1) {
@@ -338,7 +343,7 @@ end:
   return (result == BROTLI_RESULT_SUCCESS) ? 1 : 0;
 }
 
-static int Compress(int quality, int lgwin, FILE* fin, FILE* fout,
+static int Compress(int quality, int lgwin, int use_95, FILE* fin, FILE* fout,
     const char *dictionary_path) {
   BrotliEncoderState* s = BrotliEncoderCreateInstance(0, 0, 0);
   uint8_t* buffer = (uint8_t*)malloc(kFileBufferSize << 1);
@@ -358,6 +363,7 @@ static int Compress(int quality, int lgwin, FILE* fin, FILE* fout,
 
   BrotliEncoderSetParameter(s, BROTLI_PARAM_QUALITY, (uint32_t)quality);
   BrotliEncoderSetParameter(s, BROTLI_PARAM_LGWIN, (uint32_t)lgwin);
+  BrotliEncoderSetParameter(s, BROTLI_PARAM_USE_95, (uint32_t)use_95);
   if (dictionary_path != NULL) {
     size_t dictionary_size = 0;
     uint8_t* dictionary = ReadDictionary(dictionary_path, &dictionary_size);
@@ -419,10 +425,11 @@ int main(int argc, char** argv) {
   int repeat = 1;
   int verbose = 0;
   int lgwin = 0;
+  int use_95 = BROTLI_FALSE;
   clock_t clock_start;
   int i;
   ParseArgv(argc, argv, &input_path, &output_path, &dictionary_path, &force,
-            &quality, &decompress, &repeat, &verbose, &lgwin);
+            &quality, &decompress, &repeat, &verbose, &lgwin, &use_95);
   clock_start = clock();
   for (i = 0; i < repeat; ++i) {
     FILE* fin = OpenInputFile(input_path);
@@ -431,7 +438,7 @@ int main(int argc, char** argv) {
     if (decompress) {
       is_ok = Decompress(fin, fout, dictionary_path);
     } else {
-      is_ok = Compress(quality, lgwin, fin, fout, dictionary_path);
+      is_ok = Compress(quality, lgwin, use_95, fin, fout, dictionary_path);
     }
     if (!is_ok) {
       unlink(output_path);

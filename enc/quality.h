@@ -37,6 +37,7 @@ typedef struct BrotliEncoderParams {
   int quality;
   int lgwin;
   int lgblock;
+  int use_95;
 } BrotliEncoderParams;
 
 /* Returns hashtable size for quality levels 0 and 1. */
