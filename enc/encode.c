@@ -490,22 +490,16 @@ static void WriteMetaBlockInternal(MemoryManager* m,
                                        &literal_context_mode,
                                        &num_literal_contexts,
                                        &literal_context_map);
-      if (literal_context_map == NULL) {
-        BrotliBuildMetaBlockGreedy(m, data, wrapped_last_flush_pos, mask,
-                                   commands, num_commands, &mb);
-        if (BROTLI_IS_OOM(m)) return;
-      } else {
-        BrotliBuildMetaBlockGreedyWithContexts(m, data,
-                                               wrapped_last_flush_pos,
-                                               mask,
-                                               prev_byte, prev_byte2,
-                                               literal_context_mode,
-                                               num_literal_contexts,
-                                               literal_context_map,
-                                               commands, num_commands,
-                                               &mb);
-        if (BROTLI_IS_OOM(m)) return;
+      if (!BrotliIsMostlyUTF8(data, wrapped_last_flush_pos, mask, bytes,
+                              kMinUTF8Ratio)) {
+        literal_context_mode = CONTEXT_SIGNED;
       }
+      BrotliBuildMetaBlock(m, data, wrapped_last_flush_pos, mask, params,
+                           prev_byte, prev_byte2,
+                           commands, num_commands,
+                           literal_context_mode,
+                           &mb);
+      if (BROTLI_IS_OOM(m)) return;
     } else {
       if (!BrotliIsMostlyUTF8(data, wrapped_last_flush_pos, mask, bytes,
                               kMinUTF8Ratio)) {
