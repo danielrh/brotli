@@ -105,7 +105,7 @@ static void EstimateBitCostsForLiteralsUTF8(size_t pos, size_t len, size_t mask,
       size_t utf8_pos = UTF8Position(last_c, c, max_utf8);
       size_t masked_pos = (pos + i) & mask;
       size_t histo = histogram[utf8_pos][data[masked_pos]];
-      double lit_cost;
+      float lit_cost;
       if (histo == 0) {
         histo = 1;
       }
@@ -120,7 +120,7 @@ static void EstimateBitCostsForLiteralsUTF8(size_t pos, size_t len, size_t mask,
          rapidly in the beginning of the file, perhaps because the beginning
          of the data is a statistical "anomaly". */
       if (i < 2000) {
-        lit_cost += 0.7 - ((double)(2000 - i) / 2000.0 * 0.35);
+        lit_cost += 0.7 - ((float)(2000 - i) / 2000.0 * 0.35);
       }
       cost[i] = (float)lit_cost;
     }
@@ -161,7 +161,7 @@ void BrotliEstimateBitCostsForLiterals(size_t pos, size_t len, size_t mask,
         histo = 1;
       }
       {
-        double lit_cost = FastLog2(in_window) - FastLog2(histo);
+        float lit_cost = FastLog2(in_window) - FastLog2(histo);
         lit_cost += 0.029;
         if (lit_cost < 1.0) {
           lit_cost *= 0.5;

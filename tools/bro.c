@@ -448,9 +448,9 @@ int main(int argc, char** argv) {
   }
   if (verbose) {
     clock_t clock_end = clock();
-    double duration = (double)(clock_end - clock_start) / CLOCKS_PER_SEC;
+    float duration = (float)(clock_end - clock_start) / CLOCKS_PER_SEC;
     int64_t uncompressed_size;
-    double uncompressed_bytes_in_MB;
+    float uncompressed_bytes_in_MB;
     if (duration < 1e-9) {
       duration = 1e-9;
     }
@@ -460,7 +460,7 @@ int main(int argc, char** argv) {
       exit(1);
     }
     uncompressed_bytes_in_MB =
-        (double)(repeat * uncompressed_size) / (1024.0 * 1024.0);
+        (float)(repeat * uncompressed_size) / (1024.0 * 1024.0);
     if (decompress) {
       printf("Brotli decompression speed: ");
     } else {

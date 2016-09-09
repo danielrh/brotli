@@ -12,7 +12,7 @@
 typedef struct FN(Histogram) {
   uint32_t data_[DATA_SIZE];
   size_t total_count_;
-  double bit_cost_;
+  float bit_cost_;
 } FN(Histogram);
 
 static BROTLI_INLINE void FN(HistogramClear)(FN(Histogram)* self) {

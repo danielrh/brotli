@@ -20,7 +20,7 @@ typedef struct FN(BlockSplitter) {
        entropy(A+B) < entropy(A) + entropy(B) + split_threshold_,
      where A is the current histogram and B is the histogram of the last or the
      second last block type. */
-  double split_threshold_;
+  float split_threshold_;
 
   size_t num_blocks_;
   BlockSplit* split_;  /* not owned */
@@ -37,14 +37,14 @@ typedef struct FN(BlockSplitter) {
   /* Offset of the histograms of the previous two block types. */
   size_t last_histogram_ix_[2];
   /* Entropy of the previous two block types. */
-  double last_entropy_[2];
+  float last_entropy_[2];
   /* The number of times we merged the current block with the last one. */
   size_t merge_last_count_;
 } FN(BlockSplitter);
 
 static void FN(InitBlockSplitter)(
     MemoryManager* m, FN(BlockSplitter)* self, size_t alphabet_size,
-    size_t min_block_size, double split_threshold, size_t num_symbols,
+    size_t min_block_size, float split_threshold, size_t num_symbols,
     BlockSplit* split, HistogramType** histograms, size_t* histograms_size) {
   size_t max_num_blocks = num_symbols / min_block_size + 1;
   /* We have to allocate one more histogram than the maximum number of block
@@ -84,7 +84,7 @@ static void FN(InitBlockSplitter)(
 static void FN(BlockSplitterFinishBlock)(
     FN(BlockSplitter)* self, BROTLI_BOOL is_final) {
   BlockSplit* split = self->split_;
-  double* last_entropy = self->last_entropy_;
+  float* last_entropy = self->last_entropy_;
   HistogramType* histograms = self->histograms_;
   self->block_size_ =
       BROTLI_MAX(size_t, self->block_size_, self->min_block_size_);
@@ -102,11 +102,11 @@ static void FN(BlockSplitterFinishBlock)(
       FN(HistogramClear)(&histograms[self->curr_histogram_ix_]);
     self->block_size_ = 0;
   } else if (self->block_size_ > 0) {
-    double entropy = BitsEntropy(histograms[self->curr_histogram_ix_].data_,
+    float entropy = BitsEntropy(histograms[self->curr_histogram_ix_].data_,
                                  self->alphabet_size_);
     HistogramType combined_histo[2];
-    double combined_entropy[2];
-    double diff[2];
+    float combined_entropy[2];
+    float diff[2];
     size_t j;
     for (j = 0; j < 2; ++j) {
       size_t last_histogram_ix = self->last_histogram_ix_[j];

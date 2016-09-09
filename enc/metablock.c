@@ -197,7 +197,7 @@ typedef struct ContextBlockSplitter {
        entropy(A+B) < entropy(A) + entropy(B) + split_threshold_,
      where A is the current histogram and B is the histogram of the last or the
      second last block type. */
-  double split_threshold_;
+  float split_threshold_;
 
   size_t num_blocks_;
   BlockSplit* split_;  /* not owned */
@@ -214,14 +214,14 @@ typedef struct ContextBlockSplitter {
   /* Offset of the histograms of the previous two block types. */
   size_t last_histogram_ix_[2];
   /* Entropy of the previous two block types. */
-  double* last_entropy_;
+  float* last_entropy_;
   /* The number of times we merged the current block with the last one. */
   size_t merge_last_count_;
 } ContextBlockSplitter;
 
 static void InitContextBlockSplitter(
     MemoryManager* m, ContextBlockSplitter* self, size_t alphabet_size,
-    size_t num_contexts, size_t min_block_size, double split_threshold,
+    size_t num_contexts, size_t min_block_size, float split_threshold,
     size_t num_symbols, BlockSplit* split, HistogramLiteral** histograms,
     size_t* histograms_size) {
   size_t max_num_blocks = num_symbols / min_block_size + 1;
@@ -250,7 +250,7 @@ static void InitContextBlockSplitter(
       split->lengths, split->lengths_alloc_size, max_num_blocks);
   if (BROTLI_IS_OOM(m)) return;
   split->num_blocks = max_num_blocks;
-  self->last_entropy_ = BROTLI_ALLOC(m, double, 2 * num_contexts);
+  self->last_entropy_ = BROTLI_ALLOC(m, float, 2 * num_contexts);
   if (BROTLI_IS_OOM(m)) return;
   assert(*histograms == 0);
   *histograms_size = max_num_types * num_contexts;
@@ -275,7 +275,7 @@ static void ContextBlockSplitterFinishBlock(
     MemoryManager* m, ContextBlockSplitter* self, BROTLI_BOOL is_final) {
   BlockSplit* split = self->split_;
   const size_t num_contexts = self->num_contexts_;
-  double* last_entropy = self->last_entropy_;
+  float* last_entropy = self->last_entropy_;
   HistogramLiteral* histograms = self->histograms_;
 
   if (self->block_size_ < self->min_block_size_) {
@@ -305,11 +305,11 @@ static void ContextBlockSplitterFinishBlock(
        respective set of histograms for the last and second last block types.
        Decide over the split based on the total reduction of entropy across
        all contexts. */
-    double* entropy = BROTLI_ALLOC(m, double, num_contexts);
+    float* entropy = BROTLI_ALLOC(m, float, num_contexts);
     HistogramLiteral* combined_histo =
         BROTLI_ALLOC(m, HistogramLiteral, 2 * num_contexts);
-    double* combined_entropy = BROTLI_ALLOC(m, double, 2 * num_contexts);
-    double diff[2] = { 0.0 };
+    float* combined_entropy = BROTLI_ALLOC(m, float, 2 * num_contexts);
+    float diff[2] = { 0.0 };
     size_t i;
     if (BROTLI_IS_OOM(m)) return;
     for (i = 0; i < num_contexts; ++i) {
