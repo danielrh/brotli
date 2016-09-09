@@ -318,7 +318,7 @@ static void ChooseContextMap(int quality,
   size_t total = 0;
   size_t i;
   size_t dummy;
-  double entropy[4];
+  float entropy[4];
   for (i = 0; i < 9; ++i) {
     size_t j = i;
     total += bigram_histo[i];
@@ -337,7 +337,7 @@ static void ChooseContextMap(int quality,
   }
 
   assert(total != 0);
-  entropy[0] = 1.0 / (double)total;
+  entropy[0] = 1.0 / (float)total;
   entropy[1] *= entropy[0];
   entropy[2] *= entropy[0];
   entropy[3] *= entropy[0];
@@ -393,12 +393,12 @@ static BROTLI_BOOL ShouldCompress(
     const uint8_t* data, const size_t mask, const uint64_t last_flush_pos,
     const size_t bytes, const size_t num_literals, const size_t num_commands) {
   if (num_commands < (bytes >> 8) + 2) {
-    if (num_literals > 0.99 * (double)bytes) {
+    if (num_literals > 0.99 * (float)bytes) {
       uint32_t literal_histo[256] = { 0 };
       static const uint32_t kSampleRate = 13;
-      static const double kMinEntropy = 7.92;
-      const double bit_cost_threshold =
-          (double)bytes * kMinEntropy / kSampleRate;
+      static const float kMinEntropy = 7.92;
+      const float bit_cost_threshold =
+          (float)bytes * kMinEntropy / kSampleRate;
       size_t t = (bytes + kSampleRate - 1) / kSampleRate;
       uint32_t pos = (uint32_t)last_flush_pos;
       size_t i;

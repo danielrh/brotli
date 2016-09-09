@@ -9,6 +9,7 @@
 #include "./block_splitter.h"
 
 #include <assert.h>
+#include <float.h>
 #include <string.h>  /* memcpy, memset */
 
 #include "./bit_cost.h"
@@ -26,9 +27,9 @@ extern "C" {
 
 static const size_t kMaxLiteralHistograms = 100;
 static const size_t kMaxCommandHistograms = 50;
-static const double kLiteralBlockSwitchCost = 28.1;
-static const double kCommandBlockSwitchCost = 13.5;
-static const double kDistanceBlockSwitchCost = 14.6;
+static const float kLiteralBlockSwitchCost = 28.1;
+static const float kCommandBlockSwitchCost = 13.5;
+static const float kDistanceBlockSwitchCost = 14.6;
 static const size_t kLiteralStrideLength = 70;
 static const size_t kCommandStrideLength = 40;
 static const size_t kSymbolsPerLiteralHistogram = 544;
@@ -82,7 +83,7 @@ static BROTLI_INLINE unsigned int MyRand(unsigned int* seed) {
   return *seed;
 }
 
-static BROTLI_INLINE double BitCost(size_t count) {
+static BROTLI_INLINE float BitCost(size_t count) {
   return count == 0 ? -2.0 : FastLog2(count);
 }
 

@@ -38,10 +38,10 @@ BROTLI_INTERNAL void FN(BrotliCompareAndPushToQueue)(
     p.cost_combo = out[idx1].bit_cost_;
     is_good_pair = BROTLI_TRUE;
   } else {
-    double threshold = *num_pairs == 0 ? 1e99 :
-        BROTLI_MAX(double, 0.0, pairs[0].cost_diff);
+    float threshold = *num_pairs == 0 ? FLT_MAX :
+        BROTLI_MAX(float, 0.0, pairs[0].cost_diff);
     HistogramType combo = out[idx1];
-    double cost_combo;
+    float cost_combo;
     FN(HistogramAddHistogram)(&combo, &out[idx2]);
     cost_combo = FN(BrotliPopulationCost)(&combo);
     if (cost_combo < threshold - p.cost_diff) {
@@ -74,7 +74,7 @@ BROTLI_INTERNAL size_t FN(BrotliHistogramCombine)(HistogramType* out,
                                                   size_t symbols_size,
                                                   size_t max_clusters,
                                                   size_t max_num_pairs) CODE({
-  double cost_diff_threshold = 0.0;
+  float cost_diff_threshold = 0.0;
   size_t min_cluster_size = 1;
   size_t num_pairs = 0;
 
@@ -96,7 +96,7 @@ BROTLI_INTERNAL size_t FN(BrotliHistogramCombine)(HistogramType* out,
     uint32_t best_idx2;
     size_t i;
     if (pairs[0].cost_diff >= cost_diff_threshold) {
-      cost_diff_threshold = 1e99;
+      cost_diff_threshold = FLT_MAX;
       min_cluster_size = max_clusters;
       continue;
     }
@@ -152,7 +152,7 @@ BROTLI_INTERNAL size_t FN(BrotliHistogramCombine)(HistogramType* out,
 })
 
 /* What is the bit cost of moving histogram from cur_symbol to candidate. */
-BROTLI_INTERNAL double FN(BrotliHistogramBitCostDistance)(
+BROTLI_INTERNAL float FN(BrotliHistogramBitCostDistance)(
     const HistogramType* histogram, const HistogramType* candidate) CODE({
   if (histogram->total_count_ == 0) {
     return 0.0;
@@ -173,11 +173,11 @@ BROTLI_INTERNAL void FN(BrotliHistogramRemap)(const HistogramType* in,
   size_t i;
   for (i = 0; i < in_size; ++i) {
     uint32_t best_out = i == 0 ? symbols[0] : symbols[i - 1];
-    double best_bits =
+    float best_bits =
         FN(BrotliHistogramBitCostDistance)(&in[i], &out[best_out]);
     size_t j;
     for (j = 0; j < num_clusters; ++j) {
-      const double cur_bits =
+      const float cur_bits =
           FN(BrotliHistogramBitCostDistance)(&in[i], &out[clusters[j]]);
       if (cur_bits < best_bits) {
         best_bits = cur_bits;

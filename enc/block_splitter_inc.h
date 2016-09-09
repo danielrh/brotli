@@ -65,11 +65,11 @@ static void FN(RefineEntropyCodes)(const DataType* data, size_t length,
    in data[0..length) and fills in block_id[0..length) with the assigned values.
    Returns the number of blocks, i.e. one plus the number of block switches. */
 static size_t FN(FindBlocks)(const DataType* data, const size_t length,
-                             const double block_switch_bitcost,
+                             const float block_switch_bitcost,
                              const size_t num_histograms,
                              const HistogramType* histograms,
-                             double* insert_cost,
-                             double* cost,
+                             float* insert_cost,
+                             float* cost,
                              uint8_t* switch_signal,
                              uint8_t *block_id) {
   const size_t data_size = FN(HistogramDataSize)();
@@ -107,8 +107,8 @@ static size_t FN(FindBlocks)(const DataType* data, const size_t length,
     const size_t byte_ix = i;
     size_t ix = byte_ix * bitmaplen;
     size_t insert_cost_ix = data[byte_ix] * num_histograms;
-    double min_cost = 1e99;
-    double block_switch_cost = block_switch_bitcost;
+    float min_cost = FLT_MAX;
+    float block_switch_cost = block_switch_bitcost;
     size_t k;
     for (k = 0; k < num_histograms; ++k) {
       /* We are coding the symbol in data[byte_ix] with entropy code k. */
@@ -120,7 +120,7 @@ static size_t FN(FindBlocks)(const DataType* data, const size_t length,
     }
     /* More blocks for the beginning. */
     if (byte_ix < 2000) {
-      block_switch_cost *= 0.77 + 0.07 * (double)byte_ix / 2000;
+      block_switch_cost *= 0.77 + 0.07 * (float)byte_ix / 2000;
     }
     for (k = 0; k < num_histograms; ++k) {
       cost[k] -= min_cost;
@@ -305,7 +305,7 @@ static void FN(ClusterBlocks)(MemoryManager* m,
       HistogramType histo;
       size_t j;
       uint32_t best_out;
-      double best_bits;
+      float best_bits;
       FN(HistogramClear)(&histo);
       for (j = 0; j < block_lengths[i]; ++j) {
         FN(HistogramAdd)(&histo, data[pos++]);
@@ -314,7 +314,7 @@ static void FN(ClusterBlocks)(MemoryManager* m,
       best_bits =
           FN(BrotliHistogramBitCostDistance)(&histo, &all_histograms[best_out]);
       for (j = 0; j < num_final_clusters; ++j) {
-        const double cur_bits = FN(BrotliHistogramBitCostDistance)(
+        const float cur_bits = FN(BrotliHistogramBitCostDistance)(
             &histo, &all_histograms[clusters[j]]);
         if (cur_bits < best_bits) {
           best_bits = cur_bits;
@@ -362,7 +362,7 @@ static void FN(SplitByteVector)(MemoryManager* m,
                                 const size_t literals_per_histogram,
                                 const size_t max_histograms,
                                 const size_t sampling_stride_length,
-                                const double block_switch_cost,
+                                const float block_switch_cost,
                                 const BrotliEncoderParams* params,
                                 BlockSplit* split) {
   const size_t data_size = FN(HistogramDataSize)();
@@ -400,8 +400,8 @@ static void FN(SplitByteVector)(MemoryManager* m,
     uint8_t* block_ids = BROTLI_ALLOC(m, uint8_t, length);
     size_t num_blocks;
     const size_t bitmaplen = (num_histograms + 7) >> 3;
-    double* insert_cost = BROTLI_ALLOC(m, double, data_size * num_histograms);
-    double* cost = BROTLI_ALLOC(m, double, num_histograms);
+    float* insert_cost = BROTLI_ALLOC(m, float, data_size * num_histograms);
+    float* cost = BROTLI_ALLOC(m, float, num_histograms);
     uint8_t* switch_signal = BROTLI_ALLOC(m, uint8_t, length * bitmaplen);
     uint16_t* new_id = BROTLI_ALLOC(m, uint16_t, num_histograms);
     const size_t iters = params->quality < HQ_ZOPFLIFICATION_QUALITY ? 3 : 10;

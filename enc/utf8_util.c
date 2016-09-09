@@ -67,7 +67,7 @@ static size_t BrotliParseAsUTF8(
 /* Returns 1 if at least min_fraction of the data is UTF8-encoded.*/
 BROTLI_BOOL BrotliIsMostlyUTF8(
     const uint8_t* data, const size_t pos, const size_t mask,
-    const size_t length, const double min_fraction) {
+    const size_t length, const float min_fraction) {
   size_t size_utf8 = 0;
   size_t i = 0;
   while (i < length) {
@@ -77,7 +77,7 @@ BROTLI_BOOL BrotliIsMostlyUTF8(
     i += bytes_read;
     if (symbol < 0x110000) size_utf8 += bytes_read;
   }
-  return TO_BROTLI_BOOL(size_utf8 > min_fraction * (double)length);
+  return TO_BROTLI_BOOL(size_utf8 > min_fraction * (float)length);
 }
 
 #if defined(__cplusplus) || defined(c_plusplus)

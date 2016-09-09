@@ -21,8 +21,8 @@ extern "C" {
 typedef struct HistogramPair {
   uint32_t idx1;
   uint32_t idx2;
-  double cost_combo;
-  double cost_diff;
+  float cost_combo;
+  float cost_diff;
 } HistogramPair;
 
 #define CODE(X) /* Declaration */;

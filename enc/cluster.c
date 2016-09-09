@@ -6,6 +6,8 @@
 
 /* Functions for clustering similar histograms together. */
 
+#include <float.h>
+
 #include "./cluster.h"
 
 #include <brotli/types.h>
@@ -28,11 +30,11 @@ static BROTLI_INLINE BROTLI_BOOL HistogramPairIsLess(
 }
 
 /* Returns entropy reduction of the context map when we combine two clusters. */
-static BROTLI_INLINE double ClusterCostDiff(size_t size_a, size_t size_b) {
+static BROTLI_INLINE float ClusterCostDiff(size_t size_a, size_t size_b) {
   size_t size_c = size_a + size_b;
-  return (double)size_a * FastLog2(size_a) +
-    (double)size_b * FastLog2(size_b) -
-    (double)size_c * FastLog2(size_c);
+  return (float)size_a * FastLog2(size_a) +
+    (float)size_b * FastLog2(size_b) -
+    (float)size_c * FastLog2(size_c);
 }
 
 #define CODE(X) X

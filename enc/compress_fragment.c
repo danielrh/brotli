@@ -378,9 +378,9 @@ static BROTLI_BOOL ShouldMergeBlock(
   }
   {
     const size_t total = (len + kSampleRate - 1) / kSampleRate;
-    double r = (FastLog2(total) + 0.5) * (double)total + 200;
+    float r = (FastLog2(total) + 0.5) * (float)total + 200;
     for (i = 0; i < 256; ++i) {
-      r -= (double)histo[i] * (depths[i] + FastLog2(histo[i]));
+      r -= (float)histo[i] * (depths[i] + FastLog2(histo[i]));
     }
     return TO_BROTLI_BOOL(r >= 0.0);
   }
