@@ -10,6 +10,7 @@
 #define BROTLI_ENC_FAST_LOG_H_
 
 #include <math.h>
+#include <immintrin.h>
 
 #include <brotli/types.h>
 #include "../common/port.h"
@@ -123,6 +124,43 @@ static const float kLog2Table[] = {
 
 #define LOG_2_INV 1.4426950408889634
 
+// Credit: https://github.com/whackashoe/fastapprox/blob/master/fastapprox/src/fastlog.h
+#define v4sfl(x) ((const __m128) { (x), (x), (x), (x) })
+#define v2dil(x) ((const __m128i) { (x), (x) })
+#define v4sil(x) v2dil((((unsigned long long) (x)) << 32) | (x))
+static BROTLI_INLINE __m128 FastApproxXMMLog2(__m128 x) {
+  union { __m128 f; __m128i i; } vx = { x };
+  union { __m128i i; __m128 f; } mx; mx.i = (vx.i & v4sil(0x007FFFFF)) | v4sil(0x3f000000);
+  __m128 y = _mm_cvtepi32_ps(vx.i);
+  y *= v4sfl(1.1920928955078125e-7f);
+
+  const __m128 c_124_22551499 = v4sfl(124.22551499f);
+  const __m128 c_1_498030302 = v4sfl(1.498030302f);
+  const __m128 c_1_725877999 = v4sfl(1.72587999f);
+  const __m128 c_0_3520087068 = v4sfl(0.3520887068f);
+
+  return y - c_124_22551499
+         - c_1_498030302 * mx.f
+         - c_1_725877999 / (c_0_3520087068 + mx.f);
+}
+static BROTLI_INLINE float FastApproxLog2(float x) {
+  union { float f; uint32_t i; } vx = { x };
+  union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
+  float y = vx.i;
+  y *= 1.1920928955078125e-7f;
+
+  return y - 124.22551499f
+         - 1.498030302f * mx.f
+         - 1.72587999f / (0.3520887068f + mx.f);
+}
+
+static BROTLI_INLINE float FasterApproxLog2(float x) {
+  union { float f; uint32_t i; } vx = { x };
+  float y = vx.i;
+  y *= 1.1920928955078125e-7f;
+  return y - 126.94269504f;
+}
+
 /* Faster logarithm for small integers, with the property of log2(0) == 0. */
 static BROTLI_INLINE float FastLog2(size_t v) {
   if (v < sizeof(kLog2Table) / sizeof(kLog2Table[0])) {
@@ -134,7 +172,7 @@ static BROTLI_INLINE float FastLog2(size_t v) {
    * function defined, so we use log() and a multiplication instead. */
   return log((float)v) * LOG_2_INV;
 #else
-  return log2((float)v);
+  return FastApproxLog2((float)v); // log2((float)v);
 #endif
 }
 
