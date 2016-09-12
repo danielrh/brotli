@@ -61,6 +61,130 @@ static void FN(RefineEntropyCodes)(const DataType* data, size_t length,
   }
 }
 
+static BROTLI_INLINE void FN(helper_vanilla)(const size_t num_histograms,
+                                             const size_t ix,
+                                             const float min_cost,
+                                             const float block_switch_cost,
+                                             float* cost,
+                                             uint8_t* switch_signal) {
+  size_t k = 0, j = 0;
+  /*for (k = 0; k < num_histograms; k++)
+    cost[k] -= min_cost;
+  for (k = 0; k < num_histograms + 8; k += 8) {
+    uint8_t mask = 0;
+    for (j = 0; j < 8; j++) {
+      mask |= (cost[k + j] >= block_switch_cost) << j;
+      cost[k + j] = cost[k + j] >= block_switch_cost ? block_switch_cost : cost[k + j];
+    }
+    switch_signal[ix + (k >> 3)] |= mask;
+  }*/
+  for (k = 0; k < num_histograms; k++) {
+    cost[k] -= min_cost;
+    if (cost[k] >= block_switch_cost) {
+      const uint8_t mask = (uint8_t)(1u << (k & 7));
+      cost[k] = block_switch_cost;
+      switch_signal[ix + (k >> 3)] |= mask;
+    }
+  }
+}
+
+// Credit: http://stackoverflow.com/questions/13219146/how-to-sum-m256-horizontally
+static BROTLI_INLINE int FN(sum8)(__m256i x) {
+  // hiQuad = ( x7, x6, x5, x4 )
+  const __m128i hiQuad =
+      _mm_castps_si128(_mm256_extractf128_ps(_mm256_castsi256_ps(x), 1));
+  // loQuad = ( x3, x2, x1, x0 )
+  const __m128i loQuad =
+      _mm_castps_si128(_mm256_castps256_ps128(_mm256_castsi256_ps(x)));
+  // sumQuad = ( x3 + x7, x2 + x6, x1 + x5, x0 + x4 )
+  const __m128i sumQuad = _mm_add_epi32(loQuad, hiQuad);
+  // loDual = ( -, -, x1 + x5, x0 + x4 )
+  const __m128i loDual = sumQuad;
+  // hiDual = ( -, -, x3 + x7, x2 + x6 )
+  const __m128i hiDual =
+      _mm_castps_si128(_mm_movehl_ps(_mm_castsi128_ps(sumQuad),
+                                     _mm_castsi128_ps(sumQuad)));
+  // sumDual = ( -, -, x1 + x3 + x5 + x7, x0 + x2 + x4 + x6 )
+  const __m128i sumDual = _mm_add_epi32(loDual, hiDual);
+  // lo = ( -, -, -, x0 + x2 + x4 + x6 )
+  const __m128i lo = sumDual;
+  // hi = ( -, -, -, x1 + x3 + x5 + x7 )
+  const __m128i hi =
+      _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(sumDual),
+                                      _mm_castsi128_ps(sumDual), 0x1));
+  // sum = ( -, -, -, x0 + x1 + x2 + x3 + x4 + x5 + x6 + x7 )
+  const __m128i sum = _mm_add_epi32(lo, hi);
+  return _mm_cvtsi128_si32(sum);
+}
+
+static BROTLI_INLINE void FN(helper_vector)(const size_t num_histograms,
+                                            const size_t ix,
+                                            const float min_cost,
+                                            const float block_switch_cost,
+                                            float* cost,
+                                            uint8_t* switch_signal) {
+  __m256 ymm_min_cost = _mm256_broadcast_ss(&min_cost);
+  __m256 ymm_block_switch_cost = _mm256_broadcast_ss(&block_switch_cost);
+  size_t k = 0;
+  for (k = 0; k < num_histograms + 7; k += 8) {
+    __m256 costk = _mm256_loadu_ps(cost + k);
+    __m256 costk_minus_min_cost = _mm256_sub_ps(costk, ymm_min_cost);
+    _mm256_storeu_ps(cost + k, costk_minus_min_cost);
+  }
+
+  __m128 xmm_block_switch_cost = _mm_broadcast_ss(&block_switch_cost);
+  const uint32_t and_mask[] = {1 << 0, 1 << 1, 1 << 2, 1 << 3,
+                               1 << 4, 1 << 5, 1 << 6, 1 << 7};
+  __m128i xmm_and_mask0 = _mm_loadu_si128((const __m128i *) and_mask + 0);
+  __m128i xmm_and_mask4 = _mm_loadu_si128((const __m128i *) and_mask + 4);
+  __m256i ymm_and_mask = _mm256_loadu_si256((const __m256i *) and_mask);
+  for (k = 0; k < num_histograms + 7; k += 8) {
+    /*__m128 xmm_cost0 = _mm_loadu_ps(cost + k);
+    __m128 xmm_cost4 = _mm_loadu_ps(cost + k + 4);
+    __m128 xmm_cmpge0 = _mm_cmpge_ps(xmm_cost0, xmm_block_switch_cost);
+    __m128 xmm_cmpge4 = _mm_cmpge_ps(xmm_cost4, xmm_block_switch_cost);
+    __m128i xmm_test0 = _mm_castps_si128(xmm_cmpge0);
+    __m128i xmm_test4 = _mm_castps_si128(xmm_cmpge4);
+    __m128i xmm_bits0 = _mm_and_si128(xmm_test0, xmm_and_mask0);
+    __m128i xmm_bits4 = _mm_and_si128(xmm_test4, xmm_and_mask4);
+
+    __m128i xmm_add0 = _mm_hadd_epi32(xmm_bits0, xmm_bits0);
+    __m128i xmm_add4 = _mm_hadd_epi32(xmm_bits4, xmm_bits4);
+    xmm_add0 = _mm_hadd_epi32(xmm_add0, xmm_add0);
+    xmm_add4 = _mm_hadd_epi32(xmm_add4, xmm_add4);
+    __m128i xmm_result = _mm_add_epi32(xmm_add0, xmm_add4);
+
+    uint8_t result = _mm_cvtsi128_si32(xmm_result);
+
+    switch_signal[ix + (k >> 3)] |= result;
+    xmm_cost0 = _mm_min_ps(xmm_cost0, xmm_block_switch_cost);
+    xmm_cost4 = _mm_min_ps(xmm_cost4, xmm_block_switch_cost);
+    _mm_storeu_ps(cost + k    , xmm_cost0);
+    _mm_storeu_ps(cost + k + 4, xmm_cost4);*/
+
+
+    __m256 ymm_cost = _mm256_loadu_ps(cost + k);
+    // ymm_cost = _mm256_sub_ps(ymm_cost, ymm_min_cost);
+
+    __m256 ymm_cmpge = _mm256_cmp_ps(ymm_cost, ymm_block_switch_cost, 29); // _CMP_GE_OQ
+    __m256i ymm_test = _mm256_castps_si256(ymm_cmpge);
+    __m256i ymm_bits = _mm256_and_si256(ymm_test, ymm_and_mask);
+
+    // horizontal sum
+    /*__m256i ymm_tmp = _mm256_permute2f128_si256(ymm_bits, ymm_bits, 1);
+    ymm_bits = _mm256_add_epi32(ymm_bits, ymm_tmp);
+    ymm_bits = _mm256_hadd_epi32(ymm_bits, ymm_bits);
+    __m256i ymm_result = _mm256_hadd_epi32(ymm_bits, ymm_bits);
+    __m128i xmm_result = _mm256_extractf128_si256(ymm_result, 0); // plz gcc optimize this out
+    uint8_t result = _mm_cvtsi128_si32(xmm_result);*/
+    uint8_t result = FN(sum8)(ymm_bits);
+
+    switch_signal[ix + (k >> 3)] |= result;
+    ymm_cost = _mm256_min_ps(ymm_cost, ymm_block_switch_cost);
+    _mm256_storeu_ps(cost + k, ymm_cost);
+  }
+}
+
 /* Assigns a block id from the range [0, vec.size()) to each data element
    in data[0..length) and fills in block_id[0..length) with the assigned values.
    Returns the number of blocks, i.e. one plus the number of block switches. */
@@ -122,15 +246,8 @@ static size_t FN(FindBlocks)(const DataType* data, const size_t length,
     if (byte_ix < 2000) {
       block_switch_cost *= 0.77 + 0.07 * (float)byte_ix / 2000;
     }
-    for (k = 0; k < num_histograms; ++k) {
-      cost[k] -= min_cost;
-      if (cost[k] >= block_switch_cost) {
-        const uint8_t mask = (uint8_t)(1u << (k & 7));
-        cost[k] = block_switch_cost;
-        assert((k >> 3) < bitmaplen);
-        switch_signal[ix + (k >> 3)] |= mask;
-      }
-    }
+    // FN(helper_vanilla)(num_histograms, ix, min_cost, block_switch_cost, cost, switch_signal);
+    FN(helper_vector)(num_histograms, ix, min_cost, block_switch_cost, cost, switch_signal);
   }
   {  /* Trace back from the last position and switch at the marked places. */
     size_t byte_ix = length - 1;
@@ -399,11 +516,12 @@ static void FN(SplitByteVector)(MemoryManager* m,
     /* Find a good path through literals with the good entropy codes. */
     uint8_t* block_ids = BROTLI_ALLOC(m, uint8_t, length);
     size_t num_blocks;
-    const size_t bitmaplen = (num_histograms + 7) >> 3;
-    float* insert_cost = BROTLI_ALLOC(m, float, data_size * num_histograms);
-    float* cost = BROTLI_ALLOC(m, float, num_histograms);
+    const size_t PAD_LENGTH = 32; // Ensure we can write over the edge. Possibly not the best approach
+    const size_t bitmaplen = (num_histograms + PAD_LENGTH + 7) >> 3;
+    float* insert_cost = BROTLI_ALLOC(m, float, data_size * (num_histograms + PAD_LENGTH));
+    float* cost = BROTLI_ALLOC(m, float, num_histograms + PAD_LENGTH);
     uint8_t* switch_signal = BROTLI_ALLOC(m, uint8_t, length * bitmaplen);
-    uint16_t* new_id = BROTLI_ALLOC(m, uint16_t, num_histograms);
+    uint16_t* new_id = BROTLI_ALLOC(m, uint16_t, num_histograms + PAD_LENGTH);
     const size_t iters = params->quality < HQ_ZOPFLIFICATION_QUALITY ? 3 : 10;
     size_t i;
     if (BROTLI_IS_OOM(m)) return;

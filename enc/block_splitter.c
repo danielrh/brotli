@@ -12,6 +12,8 @@
 #include <float.h>
 #include <string.h>  /* memcpy, memset */
 
+#include <immintrin.h>
+
 #include "./bit_cost.h"
 #include "./cluster.h"
 #include "./command.h"

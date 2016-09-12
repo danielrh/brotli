@@ -9,7 +9,7 @@ LIB_A = libbrotli.a
 EXECUTABLE = bro
 DIRS = $(OBJDIR)/common $(OBJDIR)/dec $(OBJDIR)/enc \
        $(OBJDIR)/tools $(BINDIR)/tmp
-CFLAGS += -O3 -g -DNDEBUG -mtune=core-avx2
+CFLAGS += -O3 -g -DNDEBUG -mtune=core-avx2 -march=core-avx2
 ifeq ($(os), Darwin)
   CPPFLAGS += -DOS_MACOSX
 endif
