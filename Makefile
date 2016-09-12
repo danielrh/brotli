@@ -9,7 +9,7 @@ LIB_A = libbrotli.a
 EXECUTABLE = bro
 DIRS = $(OBJDIR)/common $(OBJDIR)/dec $(OBJDIR)/enc \
        $(OBJDIR)/tools $(BINDIR)/tmp
-CFLAGS += -O2
+CFLAGS += -O2 -march=native
 ifeq ($(os), Darwin)
   CPPFLAGS += -DOS_MACOSX
 endif
