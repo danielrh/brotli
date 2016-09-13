@@ -128,8 +128,11 @@ static const float kLog2Table[] = {
 // This isn't AVX2, but it involves some bithacking that we shouldn't do on not x86
 #ifdef __AVX2__
 #define v4sfl(x) ((const __m128) { (x), (x), (x), (x) })
+#define v8sfl(x) ((const __m256) { (x), (x), (x), (x), (x), (x), (x), (x) })
 #define v2dil(x) ((const __m128i) { (x), (x) })
+#define v4dil(x) ((const __m256i) { (x), (x), (x), (x) })
 #define v4sil(x) v2dil((((unsigned long long) (x)) << 32) | (x))
+#define v8sil(x) v4dil((((unsigned long long) (x)) << 32) | (x))
 static BROTLI_INLINE __m128 FastApproxXMMLog2(__m128 x) {
   union { __m128 f; __m128i i; } vx = { x };
   union { __m128i i; __m128 f; } mx; mx.i = (vx.i & v4sil(0x007FFFFF)) | v4sil(0x3f000000);
@@ -144,6 +147,21 @@ static BROTLI_INLINE __m128 FastApproxXMMLog2(__m128 x) {
   return y - c_124_22551499
          - c_1_498030302 * mx.f
          - c_1_725877999 / (c_0_3520087068 + mx.f);
+}
+static BROTLI_INLINE __m256 FastApproxYMMLog2(__m256 x) {
+  union { __m256 f; __m256i i; } vx = { x };
+  union { __m256i i; __m256 f; } mx; mx.i = (vx.i & v8sil(0x007FFFFF)) | v8sil(0x3f000000);
+  __m256 y = _mm256_cvtepi32_ps(vx.i);
+  y *= v8sfl(1.1920928955078125e-7f);
+
+  const __m256 c_124_22551499 = v8sfl(124.22551499f);
+  const __m256 c_1_498030302 =  v8sfl(1.498030302f);
+  const __m256 c_1_725877999 =  v8sfl(1.72587999f);
+  const __m256 c_0_3520087068 = v8sfl(0.3520887068f);
+
+  return y - c_124_22551499
+             - c_1_498030302 * mx.f
+               - c_1_725877999 / (c_0_3520087068 + mx.f);
 }
 static BROTLI_INLINE float FastApproxLog2(float x) {
   union { float f; uint32_t i; } vx = { x };
