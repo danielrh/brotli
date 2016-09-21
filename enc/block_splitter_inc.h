@@ -61,6 +61,63 @@ static void FN(RefineEntropyCodes)(const DataType* data, size_t length,
   }
 }
 
+static BROTLI_INLINE size_t FN(get_min_cost)(const size_t num_histograms,
+                                             const size_t insert_cost_ix,
+                                             float *min_cost_ret,
+                                             float* cost, const float* insert_cost) {
+  size_t k = 0, j = 0, min_ind = 0;
+  float min_cost = FLT_MAX;
+#ifdef __AVX2__
+  __m256 ymm_min_cost = _mm256_set1_ps(FLT_MAX);
+  __m256i ymm_min_index = _mm256_set1_epi32(0);
+  __m256i ymm_cur_index = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
+  k = 0;
+  if (num_histograms > 8) {
+    for (k = 0; k < num_histograms - 7; k += 8) {
+      __m256 ymm_cost = _mm256_add_ps(_mm256_loadu_ps(cost + k),
+                                      _mm256_loadu_ps(insert_cost + insert_cost_ix + k));
+      ymm_min_cost = _mm256_min_ps(ymm_cost, ymm_min_cost);
+
+      __m256 ymm_tmp = _mm256_cmp_ps(ymm_cost, ymm_min_cost, 0); // _CMP_EQ_OQ
+      __m256i ymm_test = _mm256_castps_si256(ymm_tmp);
+      ymm_min_index = _mm256_max_epi32(_mm256_and_si256(ymm_test, ymm_cur_index),
+                                       ymm_min_index);
+      ymm_cur_index = _mm256_add_epi32(_mm256_set1_epi32(8), ymm_cur_index);
+
+      _mm256_storeu_ps(cost + k, ymm_cost);
+    }
+  }
+  for (; k < num_histograms; k++) {
+    cost[k] += insert_cost[insert_cost_ix + k];
+    if (cost[k] < min_cost) {
+      min_cost = cost[k];
+      min_ind = k;
+    }
+  }
+  float min_all[8];
+  _mm256_store_ps(min_all, ymm_min_cost);
+  uint32_t index_all[8];
+  _mm256_store_si256((__m256i *) index_all, ymm_min_index);
+  for (j = 0; j < 8; j++) {
+    if (min_all[j] < min_cost) {
+      min_cost = min_all[j];
+      min_ind = index_all[j];
+    }
+  }
+#else
+  for (k = 0; k < num_histograms; ++k) {
+    /* We are coding the symbol in data[byte_ix] with entropy code k. */
+    cost[k] += insert_cost[insert_cost_ix + k];
+    if (cost[k] < min_cost) {
+      min_cost = cost[k];
+      min_ind = k;
+    }
+  }
+#endif
+  *min_cost_ret = min_cost;
+  return min_ind;
+}
+
 #ifdef __AVX2__
 // Credit: http://stackoverflow.com/questions/13219146/how-to-sum-m256-horizontally
 static BROTLI_INLINE int FN(sum8)(__m256i x) {
@@ -175,7 +232,7 @@ static size_t FN(FindBlocks)(const DataType* data, const size_t length,
           insert_cost[j] - BitCost(histograms[j].data_[i]);
     }
   }
-  memset(cost, 0, sizeof(cost[0]) * num_histograms);
+  memset(cost, 0, sizeof(cost[0]) * (num_histograms + 32));  // FIXME
   memset(switch_signal, 0, sizeof(switch_signal[0]) * length * bitmaplen);
   /* After each iteration of this loop, cost[k] will contain the difference
      between the minimum cost of arriving at the current byte position using
@@ -190,14 +247,9 @@ static size_t FN(FindBlocks)(const DataType* data, const size_t length,
     float min_cost = FLT_MAX;
     float block_switch_cost = block_switch_bitcost;
     size_t k;
-    for (k = 0; k < num_histograms; ++k) {
-      /* We are coding the symbol in data[byte_ix] with entropy code k. */
-      cost[k] += insert_cost[insert_cost_ix + k];
-      if (cost[k] < min_cost) {
-        min_cost = cost[k];
-        block_id[byte_ix] = (uint8_t)k;
-      }
-    }
+
+    block_id[byte_ix] = (uint8_t) FN(get_min_cost)(num_histograms, insert_cost_ix,
+                                                   &min_cost, cost, insert_cost);
     /* More blocks for the beginning. */
     if (byte_ix < 2000) {
       block_switch_cost *= 0.77 + 0.07 * (float)byte_ix / 2000;
