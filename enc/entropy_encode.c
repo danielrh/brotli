@@ -476,7 +476,7 @@ void BrotliConvertBitDepthsToSymbols(const uint8_t *depth,
                                      uint16_t *bits) {
   /* In Brotli, all bit depths are [1..15]
      0 bit depth means that the symbol does not exist. */
-  uint16_t bl_count[MAX_HUFFMAN_BITS] = { 0 };
+    uint16_t bl_count[MAX_HUFFMAN_BITS] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
   uint16_t next_code[MAX_HUFFMAN_BITS];
   size_t i;
   int code = 0;

@@ -18,7 +18,7 @@ typedef struct FN(Histogram) {
 static BROTLI_INLINE void FN(HistogramClear)(FN(Histogram)* self) {
   memset(self->data_, 0, sizeof(self->data_));
   self->total_count_ = 0;
-  self->bit_cost_ = HUGE_VAL;
+  self->bit_cost_ = 3.402e+38;//1.79769313e308
 }
 
 static BROTLI_INLINE void FN(ClearHistograms)(

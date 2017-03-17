@@ -29,7 +29,8 @@ extern "C" {
 #define MAX_HUFFMAN_TREE_SIZE (2 * BROTLI_NUM_COMMAND_SYMBOLS + 1)
 /* The size of Huffman dictionary for distances assuming that NPOSTFIX = 0 and
  NDIRECT = 0. */
-#define SIMPLE_DISTANCE_ALPHABET_SIZE (BROTLI_NUM_DISTANCE_SHORT_CODES + \
+#define SIMPLE_DISTANCE_ALPHABET_SIZE 64
+    /*(BROTLI_NUM_DISTANCE_SHORT_CODES +                                \
                                        (2 * BROTLI_MAX_DISTANCE_BITS))
 /* SIMPLE_DISTANCE_ALPHABET_SIZE == 64 */
 #define SIMPLE_DISTANCE_ALPHABET_BITS 6
@@ -304,9 +305,9 @@ void BrotliStoreHuffmanTree(const uint8_t* depths, size_t num,
   uint8_t huffman_tree[BROTLI_NUM_COMMAND_SYMBOLS];
   uint8_t huffman_tree_extra_bits[BROTLI_NUM_COMMAND_SYMBOLS];
   size_t huffman_tree_size = 0;
-  uint8_t code_length_bitdepth[BROTLI_CODE_LENGTH_CODES] = { 0 };
+  uint8_t code_length_bitdepth[BROTLI_CODE_LENGTH_CODES] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
   uint16_t code_length_bitdepth_symbols[BROTLI_CODE_LENGTH_CODES];
-  uint32_t huffman_tree_histogram[BROTLI_CODE_LENGTH_CODES] = { 0 };
+  uint32_t huffman_tree_histogram[BROTLI_CODE_LENGTH_CODES] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
   size_t i;
   int num_codes = 0;
   size_t code = 0;
@@ -368,7 +369,7 @@ static void BuildAndStoreHuffmanTree(const uint32_t *histogram,
                                      size_t* storage_ix,
                                      uint8_t* storage) {
   size_t count = 0;
-  size_t s4[4] = { 0 };
+  size_t s4[4] = { 0,0,0,0 };
   size_t i;
   size_t max_bits = 0;
   for (i = 0; i < length; i++) {
@@ -422,7 +423,7 @@ void BrotliBuildAndStoreHuffmanTreeFast(MemoryManager* m,
                                         size_t* storage_ix,
                                         uint8_t* storage) {
   size_t count = 0;
-  size_t symbols[4] = { 0 };
+  size_t symbols[4] = { 0,0,0,0 };
   size_t length = 0;
   size_t total = histogram_total;
   while (total != 0) {
@@ -1214,7 +1215,23 @@ void BrotliStoreMetaBlockFast(MemoryManager* m,
   BrotliWriteBits(13, 0, storage_ix, storage);
 
   if (n_commands <= 128) {
-    uint32_t histogram[BROTLI_NUM_LITERAL_SYMBOLS] = { 0 };
+      uint32_t histogram[BROTLI_NUM_LITERAL_SYMBOLS] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      };
     size_t pos = start_pos;
     size_t num_literals = 0;
     size_t i;

@@ -17,14 +17,15 @@
 #define BROTLI_NUM_LITERAL_SYMBOLS 256
 #define BROTLI_NUM_COMMAND_SYMBOLS 704
 #define BROTLI_NUM_BLOCK_LEN_SYMBOLS 26
-#define BROTLI_MAX_CONTEXT_MAP_SYMBOLS (BROTLI_MAX_NUMBER_OF_BLOCK_TYPES + \
-                                        BROTLI_CONTEXT_MAP_MAX_RLE)
-#define BROTLI_MAX_BLOCK_TYPE_SYMBOLS (BROTLI_MAX_NUMBER_OF_BLOCK_TYPES + 2)
+#define BROTLI_MAX_CONTEXT_MAP_SYMBOLS 272
+/*(BROTLI_MAX_NUMBER_OF_BLOCK_TYPES +                               \
+  BROTLI_CONTEXT_MAP_MAX_RLE)*/
+#define BROTLI_MAX_BLOCK_TYPE_SYMBOLS 258
 
 /* Specification: 3.5. Complex prefix codes */
 #define BROTLI_REPEAT_PREVIOUS_CODE_LENGTH 16
 #define BROTLI_REPEAT_ZERO_CODE_LENGTH 17
-#define BROTLI_CODE_LENGTH_CODES (BROTLI_REPEAT_ZERO_CODE_LENGTH + 1)
+#define BROTLI_CODE_LENGTH_CODES 18
 /* "code length of 8 is repeated" */
 #define BROTLI_INITIAL_REPEATED_CODE_LENGTH 8
 
@@ -34,11 +35,12 @@
 #define BROTLI_MAX_NDIRECT 120
 #define BROTLI_MAX_DISTANCE_BITS 24U
 /* BROTLI_NUM_DISTANCE_SYMBOLS == 520 */
-#define BROTLI_NUM_DISTANCE_SYMBOLS (BROTLI_NUM_DISTANCE_SHORT_CODES + \
+#define BROTLI_NUM_DISTANCE_SYMBOLS 520
+/*(BROTLI_NUM_DISTANCE_SHORT_CODES +                                   \
                                      BROTLI_MAX_NDIRECT +              \
                                      (BROTLI_MAX_DISTANCE_BITS <<      \
                                       (BROTLI_MAX_NPOSTFIX + 1)))
-
+*/
 /* 7.1. Context modes and context ID lookup for literals */
 /* "context IDs for literals are in the range of 0..63" */
 #define BROTLI_LITERAL_CONTEXT_BITS 6

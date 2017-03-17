@@ -24,14 +24,18 @@ static BROTLI_INLINE double ShannonEntropy(const uint32_t *population,
   double retval = 0;
   const uint32_t *population_end = population + size;
   size_t p;
+  int odd_number_of_elements_left = 0;
   if (size & 1) {
-    goto odd_number_of_elements_left;
+      
+    odd_number_of_elements_left = 1;
   }
   while (population < population_end) {
+      if (!odd_number_of_elements_left) {
     p = *population++;
     sum += p;
     retval -= (double)p * FastLog2(p);
- odd_number_of_elements_left:
+      }
+      odd_number_of_elements_left = 0;
     p = *population++;
     sum += p;
     retval -= (double)p * FastLog2(p);

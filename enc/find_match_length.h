@@ -19,6 +19,14 @@ extern "C" {
 /* Separate implementation for little-endian 64-bit targets, for speed. */
 #if defined(__GNUC__) && defined(_LP64) && defined(IS_LITTLE_ENDIAN)
 
+    static BROTLI_INLINE uint8_t unopt_ctzll(uint64_t val) {
+        uint8_t cnt = 0;
+        while((val&1) == 0) {
+            val >>= 1;
+            ++cnt;
+        }
+        return cnt;
+    }
 static BROTLI_INLINE size_t FindMatchLengthWithLimit(const uint8_t* s1,
                                                      const uint8_t* s2,
                                                      size_t limit) {
@@ -32,7 +40,7 @@ static BROTLI_INLINE size_t FindMatchLengthWithLimit(const uint8_t* s1,
     } else {
       uint64_t x =
           BROTLI_UNALIGNED_LOAD64(s2) ^ BROTLI_UNALIGNED_LOAD64(s1 + matched);
-      size_t matching_bits = (size_t)__builtin_ctzll(x);
+      size_t matching_bits = (size_t)unopt_ctzll(x);
       matched += matching_bits >> 3;
       return matched;
     }

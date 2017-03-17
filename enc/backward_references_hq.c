@@ -27,10 +27,10 @@ extern "C" {
 
 static const float kInfinity = 1.7e38f;  /* ~= 2 ^ 127 */
 
-static const uint32_t kDistanceCacheIndex[] = {
+static const uint32_t kDistanceCacheIndex[16] = {
   0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
 };
-static const int kDistanceCacheOffset[] = {
+static const int kDistanceCacheOffset[16] = {
   0, 0, 0, 0, -1, 1, -2, 2, -3, 3, -1, 1, -2, 2, -3, 3
 };
 

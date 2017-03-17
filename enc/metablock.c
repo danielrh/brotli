@@ -188,7 +188,7 @@ typedef struct ContextBlockSplitter {
   /* Offset of the histograms of the previous two block types. */
   size_t last_histogram_ix_[2];
   /* Entropy of the previous two block types. */
-  double last_entropy_[2 * BROTLI_MAX_STATIC_CONTEXTS];
+  double last_entropy_[6];
   /* The number of times we merged the current block with the last one. */
   size_t merge_last_count_;
 } ContextBlockSplitter;
@@ -275,9 +275,9 @@ static void ContextBlockSplitterFinishBlock(
        Decide over the split based on the total reduction of entropy across
        all contexts. */
     double entropy[BROTLI_MAX_STATIC_CONTEXTS];
-    HistogramLiteral combined_histo[2 * BROTLI_MAX_STATIC_CONTEXTS];  /* 6KiB */
-    double combined_entropy[2 * BROTLI_MAX_STATIC_CONTEXTS];
-    double diff[2] = { 0.0 };
+    HistogramLiteral combined_histo[6];  /* 6KiB */
+    double combined_entropy[6];
+    double diff[2] = { 0.0, 0.0 };
     size_t i;
     for (i = 0; i < num_contexts; ++i) {
       size_t curr_histo_ix = self->curr_histogram_ix_ + i;
@@ -390,16 +390,17 @@ static void MapStaticContexts(MemoryManager* m,
     }
   }
 }
-
+typedef struct LitBlocks{
+    BlockSplitterLiteral plain;
+    ContextBlockSplitter ctx;
+} LitBlocks;
+    
 static BROTLI_INLINE void BrotliBuildMetaBlockGreedyInternal(
     MemoryManager* m, const uint8_t* ringbuffer, size_t pos, size_t mask,
     uint8_t prev_byte, uint8_t prev_byte2, ContextType literal_context_mode,
     const size_t num_contexts, const uint32_t* static_context_map,
     const Command *commands, size_t n_commands, MetaBlockSplit* mb) {
-  union {
-    BlockSplitterLiteral plain;
-    ContextBlockSplitter ctx;
-  } lit_blocks;
+ LitBlocks lit_blocks;
   BlockSplitterCommand cmd_blocks;
   BlockSplitterDistance dist_blocks;
   size_t num_literals = 0;

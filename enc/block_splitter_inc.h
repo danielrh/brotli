@@ -215,10 +215,10 @@ static void FN(ClusterBlocks)(MemoryManager* m,
   static const uint32_t kInvalidIndex = BROTLI_UINT32_MAX;
   uint32_t* new_index;
   size_t i;
-  uint32_t sizes[HISTOGRAMS_PER_BATCH] = { 0 };
-  uint32_t new_clusters[HISTOGRAMS_PER_BATCH] = { 0 };
-  uint32_t symbols[HISTOGRAMS_PER_BATCH] = { 0 };
-  uint32_t remap[HISTOGRAMS_PER_BATCH] = { 0 };
+  uint32_t sizes[HISTOGRAMS_PER_BATCH] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+  uint32_t new_clusters[HISTOGRAMS_PER_BATCH] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+  uint32_t symbols[HISTOGRAMS_PER_BATCH] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+  uint32_t remap[HISTOGRAMS_PER_BATCH] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
   if (BROTLI_IS_OOM(m)) return;
 

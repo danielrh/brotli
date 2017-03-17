@@ -71,7 +71,7 @@ double FN(BrotliPopulationCost)(const HistogramType* histogram) {
        build a simplified histogram of the code length codes where we use the
        zero repeat code 17, but we don't use the non-zero repeat code 16. */
     size_t max_depth = 1;
-    uint32_t depth_histo[BROTLI_CODE_LENGTH_CODES] = { 0 };
+    uint32_t depth_histo[BROTLI_CODE_LENGTH_CODES] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
     const double log2total = FastLog2(histogram->total_count_);
     for (i = 0; i < data_size;) {
       if (histogram->data_[i] > 0) {

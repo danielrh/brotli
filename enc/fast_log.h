@@ -19,7 +19,8 @@ extern "C" {
 #endif
 
 static BROTLI_INLINE uint32_t Log2FloorNonZero(size_t n) {
-#if BROTLI_MODERN_COMPILER || __has_builtin(__builtin_clz)
+#if 0
+    //BROTLI_MODERN_COMPILER || __has_builtin(__builtin_clz)
   return 31u ^ (uint32_t)__builtin_clz((uint32_t)n);
 #else
   uint32_t result = 0;
@@ -32,7 +33,7 @@ static BROTLI_INLINE uint32_t Log2FloorNonZero(size_t n) {
    computation.
 
    ", ".join(["%.16ff" % x for x in [0.0]+[log2(x) for x in range(1, 256)]]) */
-static const float kLog2Table[] = {
+static const float kLog2Table[256] = {
   0.0000000000000000f, 0.0000000000000000f, 1.0000000000000000f,
   1.5849625007211563f, 2.0000000000000000f, 2.3219280948873622f,
   2.5849625007211561f, 2.8073549220576042f, 3.0000000000000000f,

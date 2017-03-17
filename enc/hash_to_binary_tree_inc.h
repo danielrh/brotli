@@ -36,7 +36,7 @@ typedef struct HashToBinaryTree {
   /* Hash table that maps the 4-byte hashes of the sequence to the last
      position where this hash was found, which is the root of the binary
      tree of sequences that share this hash bucket. */
-  uint32_t buckets_[BUCKET_SIZE];
+  uint32_t buckets_[131072];
 
   /* A position used to mark a non-existent sequence, i.e. a tree is empty if
      its root is at invalid_pos_ and a node is a leaf if both its children
@@ -207,7 +207,7 @@ static BROTLI_INLINE size_t FN(FindAllMatches)(HasherHandle handle,
   const size_t short_match_max_backward =
       params->quality != HQ_ZOPFLIFICATION_QUALITY ? 16 : 64;
   size_t stop = cur_ix - short_match_max_backward;
-  uint32_t dict_matches[BROTLI_MAX_STATIC_DICTIONARY_MATCH_LEN + 1];
+  uint32_t dict_matches[38];
   size_t i;
   if (cur_ix < short_match_max_backward) { stop = 0; }
   for (i = cur_ix - 1; i > stop && best_len <= 2; --i) {

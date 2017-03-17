@@ -51,7 +51,7 @@ typedef struct ZopfliNode {
      pass |cost| it used to store the goal function. When node is processed its
      |cost| is invalidated in favor of |shortcut|. On path back-tracing pass
      |next| is assigned the offset to next node on the path. */
-  union {
+  struct {
     /* Smallest cost to get to this byte from the beginning, as found so far. */
     float cost;
     /* Offset to the next node on the path. Equals to command_length() of the

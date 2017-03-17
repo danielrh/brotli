@@ -60,7 +60,8 @@ OR:
   }
 
 */
-#if BROTLI_MODERN_COMPILER || __has_builtin(__builtin_expect)
+#if 0
+//BROTLI_MODERN_COMPILER || __has_builtin(__builtin_expect)
 #define BROTLI_PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
 #define BROTLI_PREDICT_FALSE(x) (__builtin_expect(x, 0))
 #else

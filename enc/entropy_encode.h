@@ -81,7 +81,7 @@ typedef BROTLI_BOOL (*HuffmanTreeComparator)(
     const HuffmanTree*, const HuffmanTree*);
 static BROTLI_INLINE void SortHuffmanTreeItems(HuffmanTree* items,
     const size_t n, HuffmanTreeComparator comparator) {
-  static const size_t gaps[] = {132, 57, 23, 10, 4, 1};
+  static const size_t gaps[6] = {132, 57, 23, 10, 4, 1};
   if (n < 13) {
     /* Insertion sort. */
     size_t i;
