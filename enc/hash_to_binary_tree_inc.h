@@ -187,6 +187,7 @@ static BROTLI_INLINE BackwardMatch* FN(StoreAndFindMatches)(
     }
   }
   return matches;
+
 }
 
 /* Finds all backward matches of &data[cur_ix & ring_buffer_mask] up to the

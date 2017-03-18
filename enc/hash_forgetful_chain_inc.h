@@ -17,10 +17,10 @@
 
 #define HashForgetfulChain HASHER()
 
-#define BANK_SIZE (1 << BANK_BITS)
+//#define BANK_SIZE (1 << BANK_BITS)
 
 /* Number of hash buckets. */
-#define BUCKET_SIZE (1 << BUCKET_BITS)
+//#define BUCKET_SIZE (1 << BUCKET_BITS)
 
 #define CAPPED_CHAINS 0
 

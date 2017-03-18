@@ -263,27 +263,34 @@ static BROTLI_INLINE size_t BackwardMatchLengthCode(const BackwardMatch* self) {
 #define BUCKET_SWEEP 1
 #define HASH_LEN 5
 #define USE_DICTIONARY 1
+    // (1<<16 + 1) + 1
+#define BUCKET_SIZE_PLUS_BUCKET_SWEEP 65537
 #include "./hash_longest_match_quickly_inc.h"  /* NOLINT(build/include) */
 #undef BUCKET_SWEEP
 #undef USE_DICTIONARY
+#undef BUCKET_SIZE_PLUS_BUCKET_SWEEP
 #undef HASHER
 
 #define HASHER() H3
 #define BUCKET_SWEEP 2
 #define USE_DICTIONARY 0
+#define BUCKET_SIZE_PLUS_BUCKET_SWEEP 65538
 #include "./hash_longest_match_quickly_inc.h"  /* NOLINT(build/include) */
 #undef USE_DICTIONARY
 #undef BUCKET_SWEEP
 #undef BUCKET_BITS
+#undef BUCKET_SIZE_PLUS_BUCKET_SWEEP
 #undef HASHER
 
 #define HASHER() H4
 #define BUCKET_BITS 17
 #define BUCKET_SWEEP 4
 #define USE_DICTIONARY 1
+#define BUCKET_SIZE_PLUS_BUCKET_SWEEP 131076
 #include "./hash_longest_match_quickly_inc.h"  /* NOLINT(build/include) */
 #undef USE_DICTIONARY
 #undef HASH_LEN
+#undef BUCKET_SIZE_PLUS_BUCKET_SWEEP
 #undef BUCKET_SWEEP
 #undef BUCKET_BITS
 #undef HASHER
@@ -301,12 +308,16 @@ static BROTLI_INLINE size_t BackwardMatchLengthCode(const BackwardMatch* self) {
 #define NUM_LAST_DISTANCES_TO_CHECK 4
 #define NUM_BANKS 1
 #define BANK_BITS 16
+#define BANK_SIZE 65536
+#define BUCKET_SIZE 32768
 #define HASHER() H40
 #include "./hash_forgetful_chain_inc.h"  /* NOLINT(build/include) */
 #undef HASHER
 #undef NUM_LAST_DISTANCES_TO_CHECK
 
 #define NUM_LAST_DISTANCES_TO_CHECK 10
+#define BANK_SIZE 65536
+#define BUCKET_SIZE 32768
 #define HASHER() H41
 #include "./hash_forgetful_chain_inc.h"  /* NOLINT(build/include) */
 #undef HASHER
@@ -317,6 +328,8 @@ static BROTLI_INLINE size_t BackwardMatchLengthCode(const BackwardMatch* self) {
 #define NUM_LAST_DISTANCES_TO_CHECK 16
 #define NUM_BANKS 512
 #define BANK_BITS 9
+#define BANK_SIZE 512
+#define BUCKET_SIZE 32768
 #define HASHER() H42
 #include "./hash_forgetful_chain_inc.h"  /* NOLINT(build/include) */
 #undef HASHER
@@ -331,11 +344,13 @@ static BROTLI_INLINE size_t BackwardMatchLengthCode(const BackwardMatch* self) {
 #define BUCKET_SWEEP 4
 #define HASH_LEN 7
 #define USE_DICTIONARY 0
+#define BUCKET_SIZE_PLUS_BUCKET_SWEEP 1048580
 #include "./hash_longest_match_quickly_inc.h"  /* NOLINT(build/include) */
 #undef USE_DICTIONARY
 #undef HASH_LEN
 #undef BUCKET_SWEEP
 #undef BUCKET_BITS
+#undef BUCKET_SIZE_PLUS_BUCKET_SWEEP
 #undef HASHER
 
 #undef FN

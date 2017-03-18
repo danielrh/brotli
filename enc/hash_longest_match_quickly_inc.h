@@ -35,7 +35,7 @@ static uint32_t FN(HashBytes)(const uint8_t* data) {
    This is a hash map of fixed size (BUCKET_SIZE). Starting from the
    given index, BUCKET_SWEEP buckets are used to store values of a key. */
 typedef struct HashLongestMatchQuickly {
-  uint32_t buckets_[BUCKET_SIZE + BUCKET_SWEEP];
+  uint32_t buckets_[BUCKET_SIZE_PLUS_BUCKET_SWEEP];
 } HashLongestMatchQuickly;
 
 static BROTLI_INLINE HashLongestMatchQuickly* FN(Self)(HasherHandle handle) {
