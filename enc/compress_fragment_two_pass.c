@@ -260,7 +260,8 @@ static BROTLI_INLINE void CreateCommands(const uint8_t* input,
     const uint8_t* ip_limit = input + len_limit;
 
     uint32_t next_hash;
-    for (next_hash = Hash(++ip, shift); ; ) {
+    int goto_emit_remainder  = 0;
+    for (next_hash = Hash(++ip, shift); !goto_emit_remainder ; ) {
       /* Step 1: Scan forward in the input looking for a 6-byte-long match.
          If we get close to exhausting the input then goto emit_remainder.
 
@@ -280,9 +281,9 @@ static BROTLI_INLINE void CreateCommands(const uint8_t* input,
 
       const uint8_t* next_ip = ip;
       const uint8_t* candidate;
-
+      
       assert(next_emit < ip);
-trawl:
+      do {//trawl
       do {
         uint32_t hash = next_hash;
         uint32_t bytes_between_hash_lookups = skip++ >> 5;
@@ -290,7 +291,8 @@ trawl:
         assert(hash == Hash(ip, shift));
         next_ip = ip + bytes_between_hash_lookups;
         if (BROTLI_PREDICT_FALSE(next_ip > ip_limit)) {
-          goto emit_remainder;
+          goto_emit_remainder = 1;
+          break;
         }
         next_hash = Hash(next_ip, shift);
         candidate = ip - last_distance;
@@ -309,8 +311,10 @@ trawl:
 
       /* Check copy distance. If candidate is not feasible, continue search.
          Checking is done outside of hot loop to reduce overhead. */
-      if (ip - candidate > MAX_DISTANCE) goto trawl;
-
+      }while (ip - candidate > MAX_DISTANCE && !goto_emit_remainder);//goto trawl
+      if (goto_emit_remainder) {
+          break;
+      }
       /* Step 2: Emit the found match together with the literal bytes from
          "next_emit", and then see if we can find a next match immediately
          afterwards. Repeat until we find no match for the input
@@ -340,7 +344,8 @@ trawl:
 
         next_emit = ip;
         if (BROTLI_PREDICT_FALSE(ip >= ip_limit)) {
-          goto emit_remainder;
+            goto_emit_remainder = 1;
+            break;
         }
         {
           /* We could immediately start working at ip now, but to improve
@@ -380,7 +385,8 @@ trawl:
 
         next_emit = ip;
         if (BROTLI_PREDICT_FALSE(ip >= ip_limit)) {
-          goto emit_remainder;
+          goto_emit_remainder = 1;
+          break;
         }
         {
           /* We could immediately start working at ip now, but to improve
@@ -405,8 +411,9 @@ trawl:
           table[cur_hash] = (int)(ip - base_ip);
         }
       }
-
-      next_hash = Hash(++ip, shift);
+      if (!goto_emit_remainder) {
+        next_hash = Hash(++ip, shift);
+      }
     }
   }
 

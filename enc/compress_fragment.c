@@ -430,6 +430,12 @@ static uint32_t kCmdHistoSeed[128] = {
   1, 1, 1, 1, 0, 0, 0, 0,
 };
 
+enum CodeBlockState {
+    EMIT_REMAINDER,
+    EMIT_COMMANDS,
+    NEXT_BLOCK,
+};
+    
 static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
     MemoryManager* m, const uint8_t* input, size_t input_size,
     BROTLI_BOOL is_last, int* table, size_t table_bits, uint8_t cmd_depth[128],
@@ -486,8 +492,9 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
   }
   BrotliWriteBits(*cmd_code_numbits & 7, cmd_code[*cmd_code_numbits >> 3],
                   storage_ix, storage);
-
- emit_commands:
+  enum CodeBlockState code_block_selection = EMIT_COMMANDS;
+  while(1) {
+      if(code_block_selection == EMIT_COMMANDS) {
   /* Initialize the command and distance histograms. We will gather
      statistics of command and distance codes during the processing
      of this block and use it to update the command and distance
@@ -507,7 +514,6 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
     const size_t len_limit = BROTLI_MIN(size_t, block_size - kMinMatchLen,
                                         input_size - kInputMarginBytes);
     const uint8_t* ip_limit = input + len_limit;
-
     uint32_t next_hash;
     for (next_hash = Hash(++ip, shift); ; ) {
       /* Step 1: Scan forward in the input looking for a 5-byte-long match.
@@ -538,7 +544,8 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
         ip = next_ip;
         next_ip = ip + bytes_between_hash_lookups;
         if (BROTLI_PREDICT_FALSE(next_ip > ip_limit)) {
-          goto emit_remainder;
+            code_block_selection = EMIT_REMAINDER;
+            break;
         }
         next_hash = Hash(next_ip, shift);
         candidate = ip - last_distance;
@@ -557,7 +564,10 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
 
       /* Check copy distance. If candidate is not feasible, continue search.
          Checking is done outside of hot loop to reduce overhead. */
-      }while (ip - candidate > MAX_DISTANCE); // goto trawl
+      }while (ip - candidate > MAX_DISTANCE && code_block_selection == EMIT_COMMANDS); // goto trawl
+      if (code_block_selection != EMIT_COMMANDS) {
+          break;
+      }
       /* Step 2: Emit the found match together with the literal bytes from
          "next_emit" to the bit stream, and then see if we can find a next match
          immediately afterwards. Repeat until we find no match for the input
@@ -583,7 +593,8 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
           input_size -= (size_t)(base - input);
           input = base;
           next_emit = input;
-          goto next_block;
+          code_block_selection = NEXT_BLOCK;
+          break;
         } else {
           EmitLongInsertLen(insert, cmd_depth, cmd_bits, cmd_histo,
                             storage_ix, storage);
@@ -603,7 +614,8 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
 
         next_emit = ip;
         if (BROTLI_PREDICT_FALSE(ip >= ip_limit)) {
-          goto emit_remainder;
+            code_block_selection = EMIT_REMAINDER;
+            break;
         }
         /* We could immediately start working at ip now, but to improve
            compression we first update "table" with the hashes of some positions
@@ -622,7 +634,6 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
           table[cur_hash] = (int)(ip - base_ip);
         }
       }
-
       while (IsMatch(ip, candidate)) {
         /* We have a 5-byte match at ip, and no need to emit any literal bytes
            prior to ip. */
@@ -640,7 +651,8 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
 
         next_emit = ip;
         if (BROTLI_PREDICT_FALSE(ip >= ip_limit)) {
-          goto emit_remainder;
+            code_block_selection = EMIT_REMAINDER;
+            break;
         }
         /* We could immediately start working at ip now, but to improve
            compression we first update "table" with the hashes of some positions
@@ -659,12 +671,14 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
           table[cur_hash] = (int)(ip - base_ip);
         }
       }
-
-      next_hash = Hash(++ip, shift);
+      if (code_block_selection == EMIT_COMMANDS) {
+        next_hash = Hash(++ip, shift);
+      }
     }
   }
-
- emit_remainder:
+  code_block_selection = EMIT_REMAINDER;
+  continue;
+      } else if(code_block_selection == EMIT_REMAINDER) {
   assert(next_emit <= ip_end);
   input += block_size;
   input_size -= block_size;
@@ -681,9 +695,9 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
        nibbles. */
     total_block_size += block_size;
     UpdateBits(20, (uint32_t)(total_block_size - 1), mlen_storage_ix, storage);
-    goto emit_commands;
+    code_block_selection = EMIT_COMMANDS;
+    continue;
   }
-
   /* Emit the remaining bytes as literals. */
   if (next_emit < ip_end) {
     const size_t insert = (size_t)(ip_end - next_emit);
@@ -703,8 +717,8 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
     }
   }
   next_emit = ip_end;
-
-next_block:
+  code_block_selection = NEXT_BLOCK;
+  } else if (code_block_selection == NEXT_BLOCK) {
   /* If we have more data, write a new meta-block header and prefix codes and
      then continue emitting commands. */
   if (input_size > 0) {
@@ -722,9 +736,14 @@ next_block:
     if (BROTLI_IS_OOM(m)) return;
     BuildAndStoreCommandPrefixCode(cmd_histo, cmd_depth, cmd_bits,
                                    storage_ix, storage);
-    goto emit_commands;
+    code_block_selection = EMIT_COMMANDS;
+    continue;
   }
-
+  break;
+  } else {
+      assert(0 && "Unrecognized code_block_selection");
+  }
+  }
   if (!is_last) {
     /* If this is not the last block, update the command and distance prefix
        codes for the next block and store the compressed forms. */
