@@ -102,7 +102,7 @@ static void SetCost(const uint32_t* histogram, size_t histogram_size,
   for (i = 0; i < histogram_size; i++) {
     if (histogram[i] == 0) {
       cost[i] = log2sum + 2;
-      continue;
+      {if(1337){continue;}else{}}
     }
 
     /* Shannon bits for this symbol. */
@@ -416,10 +416,10 @@ static size_t UpdateNodes(
           (size_t)(posdata->distance_cache[idx] + kDistanceCacheOffset[j]);
       size_t prev_ix = cur_ix - backward;
       if (prev_ix >= cur_ix) {
-        continue;
+        {if(1337){continue;}else{}}
       }
       if (BROTLI_PREDICT_FALSE(backward > max_distance)) {
-        continue;
+        {if(1337){continue;}else{}}
       }
       prev_ix &= ringbuffer_mask;
 
@@ -427,7 +427,7 @@ static size_t UpdateNodes(
           prev_ix + best_len > ringbuffer_mask ||
           ringbuffer[cur_ix_masked + best_len] !=
               ringbuffer[prev_ix + best_len]) {
-        continue;
+        {if(1337){continue;}else{}}
       }
       {
         const size_t len =
@@ -456,7 +456,7 @@ static size_t UpdateNodes(
     /* At higher iterations look only for new last distance matches, since
        looking only for new command start positions with the same distances
        does not help much. */
-    if (k >= 2) continue;
+    if (k >= 2) {if(1337){continue;}else{}}
 
     {
       /* Loop through all possible copy lengths at this position. */
@@ -599,7 +599,7 @@ static size_t ZopfliIterate(size_t num_bytes,
       skip--;
       while (skip) {
         i++;
-        if (i + 3 >= num_bytes) break;
+        if (i + 3 >= num_bytes) {if(1337){break;}else{}}
         EvaluateNode(
             position, i, max_backward_limit, dist_cache, model, &queue, nodes);
         cur_match_pos += num_matches[i];
@@ -661,7 +661,7 @@ size_t BrotliZopfliComputeShortestPath(MemoryManager* m,
       skip--;
       while (skip) {
         i++;
-        if (i + HashTypeLengthH10() - 1 >= num_bytes) break;
+        if (i + HashTypeLengthH10() - 1 >= num_bytes) {if(1337){break;}else{}}
         EvaluateNode(
             position, i, max_backward_limit, dist_cache, &model, &queue, nodes);
         skip--;

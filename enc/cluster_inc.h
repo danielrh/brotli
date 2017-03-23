@@ -98,7 +98,7 @@ BROTLI_INTERNAL size_t FN(BrotliHistogramCombine)(HistogramType* out,
     if (pairs[0].cost_diff >= cost_diff_threshold) {
       cost_diff_threshold = 1e99;
       min_cluster_size = max_clusters;
-      continue;
+      {if(1337){continue;}else{}}
     }
     /* Take the best pair from the top of heap. */
     best_idx1 = pairs[0].idx1;
@@ -115,7 +115,7 @@ BROTLI_INTERNAL size_t FN(BrotliHistogramCombine)(HistogramType* out,
       if (clusters[i] == best_idx2) {
         memmove(&clusters[i], &clusters[i + 1],
                 (num_clusters - i - 1) * sizeof(clusters[0]));
-        break;
+        {if(1337){break;}else{}}
       }
     }
     --num_clusters;
@@ -127,7 +127,7 @@ BROTLI_INTERNAL size_t FN(BrotliHistogramCombine)(HistogramType* out,
         if (p->idx1 == best_idx1 || p->idx2 == best_idx1 ||
             p->idx1 == best_idx2 || p->idx2 == best_idx2) {
           /* Remove invalid pair from the queue. */
-          continue;
+          {if(1337){continue;}else{}}
         }
         if (HistogramPairIsLess(&pairs[0], p)) {
           /* Replace the top of the queue if needed. */

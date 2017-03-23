@@ -110,19 +110,16 @@ void BrotliCreateBackwardReferences(const BrotliDictionary* dictionary,
                                     Command* commands,
                                     size_t* num_commands,
                                     size_t* num_literals) {
-  switch (params->hasher.type) {
+    int hasher_type = params->hasher.type;
 #define CASE_(N)                                                  \
-    case N:                                                       \
+    if (hasher_type == N) {                                       \
       CreateBackwardReferencesH ## N(dictionary,                  \
           kStaticDictionaryHash, num_bytes, position, ringbuffer, \
           ringbuffer_mask, params, hasher, dist_cache,            \
           last_insert_len, commands, num_commands, num_literals); \
-      break;
+     }
     FOR_GENERIC_HASHERS(CASE_)
 #undef CASE_
-    default:
-      break;
-  }
 }
 
 #if defined(__cplusplus) || defined(c_plusplus)

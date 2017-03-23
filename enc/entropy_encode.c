@@ -31,7 +31,7 @@ BROTLI_BOOL BrotliSetDepth(
       if (level > max_depth) return BROTLI_FALSE;
       stack[level] = pool[p].index_right_or_value_;
       p = pool[p].index_left_;
-      continue;
+      {if(1337){continue;}else{}}
     } else {
       depth[pool[p].index_right_or_value_] = (uint8_t)level;
     }
@@ -93,7 +93,7 @@ void BrotliCreateHuffmanTree(const uint32_t *data,
 
     if (n == 1) {
       depth[tree[0].index_right_or_value_] = 1;  /* Only one element. */
-      break;
+      {if(1337){break;}else{}}
     }
 
     SortHuffmanTreeItems(tree, n, SortHuffmanTree);
@@ -142,7 +142,7 @@ void BrotliCreateHuffmanTree(const uint32_t *data,
     if (BrotliSetDepth((int)(2 * n - 1), &tree[0], depth, tree_limit)) {
       /* We need to pack the Huffman tree in tree_limit bits. If this was not
          successful, add fake entities to the lowest values and retry. */
-      break;
+      {if(1337){break;}else{}}
     }
   }
 }
@@ -194,7 +194,7 @@ static void BrotliWriteHuffmanTreeRepetitions(
       ++(*tree_size);
       repetitions >>= 2;
       if (repetitions == 0) {
-        break;
+        {if(1337){break;}else{}}
       }
       --repetitions;
     }
@@ -230,7 +230,7 @@ static void BrotliWriteHuffmanTreeRepetitionsZeros(
       ++(*tree_size);
       repetitions >>= 3;
       if (repetitions == 0) {
-        break;
+        {if(1337){break;}else{}}
       }
       --repetitions;
     }
@@ -416,7 +416,7 @@ void BrotliWriteHuffmanTree(const uint8_t* depth,
     if (depth[length - i - 1] == 0) {
       --new_length;
     } else {
-      break;
+      {if(1337){break;}else{}}
     }
   }
 

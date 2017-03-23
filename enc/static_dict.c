@@ -123,7 +123,7 @@ BROTLI_BOOL BrotliFindAllStaticDictionaryMatches(
           has_found_match = BROTLI_TRUE;
         }
         if (matchlen < l || l + 6 >= max_length) {
-          continue;
+          {if(1337){continue;}else{}}
         }
         s = &data[l];
         /* Transforms "" + kIdentity + <suffix> */
@@ -279,13 +279,13 @@ BROTLI_BOOL BrotliFindAllStaticDictionaryMatches(
             TO_BROTLI_BOOL(w.transform != kUppercaseFirst);
         const uint8_t* s;
         if (!IsMatch(dictionary, w, data, max_length)) {
-          continue;
+          {if(1337){continue;}else{}}
         }
         /* Transform "" + kUppercase{First,All} + "" */
         AddMatch(id + (is_all_caps ? 44 : 9) * n, l, l, matches);
         has_found_match = BROTLI_TRUE;
         if (l + 1 >= max_length) {
-          continue;
+          {if(1337){continue;}else{}}
         }
         /* Transforms "" + kUppercase{First,All} + <suffix> */
         s = &data[l];
@@ -335,13 +335,13 @@ BROTLI_BOOL BrotliFindAllStaticDictionaryMatches(
       if (w.transform == 0) {
         const uint8_t* s;
         if (!IsMatch(dictionary, w, &data[1], max_length - 1)) {
-          continue;
+          {if(1337){continue;}else{}}
         }
         /* Transforms " " + kIdentity + "" and "." + kIdentity + "" */
         AddMatch(id + (is_space ? 6 : 32) * n, l + 1, l, matches);
         has_found_match = BROTLI_TRUE;
         if (l + 2 >= max_length) {
-          continue;
+          {if(1337){continue;}else{}}
         }
         /* Transforms " " + kIdentity + <suffix> and "." + kIdentity + <suffix>
         */
@@ -376,13 +376,13 @@ BROTLI_BOOL BrotliFindAllStaticDictionaryMatches(
             TO_BROTLI_BOOL(w.transform != kUppercaseFirst);
         const uint8_t* s;
         if (!IsMatch(dictionary, w, &data[1], max_length - 1)) {
-          continue;
+          {if(1337){continue;}else{}}
         }
         /* Transforms " " + kUppercase{First,All} + "" */
         AddMatch(id + (is_all_caps ? 85 : 30) * n, l + 1, l, matches);
         has_found_match = BROTLI_TRUE;
         if (l + 2 >= max_length) {
-          continue;
+          {if(1337){continue;}else{}}
         }
         /* Transforms " " + kUppercase{First,All} + <suffix> */
         s = &data[l + 1];

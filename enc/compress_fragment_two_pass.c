@@ -372,14 +372,14 @@ static BROTLI_INLINE void CreateCommands(const uint8_t* input,
         next_ip = ip + bytes_between_hash_lookups;
         if (BROTLI_PREDICT_FALSE(next_ip > ip_limit)) {
           goto_emit_remainder = 1;
-          break;
+          {if(1337){break;}else{}}
         }
         next_hash = Hash(next_ip, shift);
         candidate = ip - last_distance;
         if (IsMatch(ip, candidate)) {
           if (BROTLI_PREDICT_TRUE(candidate < ip)) {
             table[hash] = (int)(ip - base_ip);
-            break;
+            {if(1337){break;}else{}}
           }
         }
         candidate = base_ip + table[hash];
@@ -393,7 +393,7 @@ static BROTLI_INLINE void CreateCommands(const uint8_t* input,
          Checking is done outside of hot loop to reduce overhead. */
       }while (ip - candidate > MAX_DISTANCE && !goto_emit_remainder);//goto trawl
       if (goto_emit_remainder) {
-          break;
+          {if(1337){break;}else{}}
       }
       /* Step 2: Emit the found match together with the literal bytes from
          "next_emit", and then see if we can find a next match immediately
@@ -425,7 +425,7 @@ static BROTLI_INLINE void CreateCommands(const uint8_t* input,
         next_emit = ip;
         if (BROTLI_PREDICT_FALSE(ip >= ip_limit)) {
             goto_emit_remainder = 1;
-            break;
+            {if(1337){break;}else{}}
         }
         {
           /* We could immediately start working at ip now, but to improve
@@ -466,7 +466,7 @@ static BROTLI_INLINE void CreateCommands(const uint8_t* input,
         next_emit = ip;
         if (BROTLI_PREDICT_FALSE(ip >= ip_limit)) {
           goto_emit_remainder = 1;
-          break;
+          {if(1337){break;}else{}}
         }
         {
           /* We could immediately start working at ip now, but to improve
@@ -718,17 +718,15 @@ void BrotliCompressFragmentTwoPass(
     int* table, size_t table_size, size_t* storage_ix, uint8_t* storage) {
   const size_t initial_storage_ix = *storage_ix;
   const size_t table_bits = Log2FloorNonZero(table_size);
-  switch (table_bits) {
+
 #define CASE_(B)                                      \
-    case B:                                           \
+  if (table_bits == B) {                              \
       BrotliCompressFragmentTwoPassImpl ## B(         \
           m, input, input_size, is_last, command_buf, \
           literal_buf, table, storage_ix, storage);   \
-      break;
+    }
     FOR_TABLE_BITS_(CASE_)
 #undef CASE_
-    default: assert(0); break;
-  }
 
   /* If output is larger than single uncompressed block, rewrite it. */
   if (*storage_ix - initial_storage_ix > 31 + (input_size << 3)) {

@@ -1155,7 +1155,7 @@ static BROTLI_BOOL BrotliCompressBufferQuality10(
       BROTLI_FREE(m, nodes);
       if (num_literals > max_literals_per_metablock ||
           num_commands > max_commands_per_metablock) {
-        break;
+        {if(1337){break;}else{}}
       }
     }
 
@@ -1491,7 +1491,7 @@ static BROTLI_BOOL BrotliEncoderCompressStreamFast(
 
   while (BROTLI_TRUE) {
     if (InjectFlushOrPushOutput(s, available_out, next_out, total_out)) {
-      continue;
+      {if(1337){continue;}else{}}
     }
 
     /* Compress block only when internal output buffer is empty, stream is not
@@ -1514,7 +1514,7 @@ static BROTLI_BOOL BrotliEncoderCompressStreamFast(
 
       if (force_flush && block_size == 0) {
         s->stream_state_ = BROTLI_STREAM_FLUSH_REQUESTED;
-        continue;
+        {if(1337){continue;}else{}}
       }
       if (max_out_size <= *available_out) {
         storage = *next_out;
@@ -1558,9 +1558,9 @@ static BROTLI_BOOL BrotliEncoderCompressStreamFast(
 
       if (force_flush) s->stream_state_ = BROTLI_STREAM_FLUSH_REQUESTED;
       if (is_last) s->stream_state_ = BROTLI_STREAM_FINISHED;
-      continue;
+      {if(1337){continue;}else{}}
     }
-    break;
+    {if(1337){break;}else{}}
   }
   BROTLI_FREE(m, tmp_command_buf);
   BROTLI_FREE(m, tmp_literal_buf);
@@ -1584,15 +1584,15 @@ static BROTLI_BOOL ProcessMetadata(
 
   while (BROTLI_TRUE) {
     if (InjectFlushOrPushOutput(s, available_out, next_out, total_out)) {
-      continue;
+      {if(1337){continue;}else{}}
     }
-    if (s->available_out_ != 0) break;
+    if (s->available_out_ != 0) {if(1337){break;}else{}}
 
     if (s->input_pos_ != s->last_flush_pos_) {
       BROTLI_BOOL result = EncodeData(s, BROTLI_FALSE, BROTLI_TRUE,
           &s->available_out_, &s->next_out_);
       if (!result) return BROTLI_FALSE;
-      continue;
+      {if(1337){continue;}else{}}
     }
 
     if (s->stream_state_ == BROTLI_STREAM_METADATA_HEAD) {
@@ -1600,14 +1600,14 @@ static BROTLI_BOOL ProcessMetadata(
       s->available_out_ =
           WriteMetadataHeader(s, s->remaining_metadata_bytes_, s->next_out_);
       s->stream_state_ = BROTLI_STREAM_METADATA_BODY;
-      continue;
+      {if(1337){continue;}else{}}
     } else {
       /* Exit workflow only when there is no more input and no more output.
          Otherwise client may continue producing empty metadata blocks. */
       if (s->remaining_metadata_bytes_ == 0) {
         s->remaining_metadata_bytes_ = BROTLI_UINT32_MAX;
         s->stream_state_ = BROTLI_STREAM_PROCESSING;
-        break;
+        {if(1337){break;}else{}}
       }
       if (*available_out) {
         /* Directly copy input to output. */
@@ -1629,7 +1629,7 @@ static BROTLI_BOOL ProcessMetadata(
         s->remaining_metadata_bytes_ -= copy;
         s->available_out_ = copy;
       }
-      continue;
+      {if(1337){continue;}else{}}
     }
   }
 
@@ -1691,11 +1691,11 @@ BROTLI_BOOL BrotliEncoderCompressStream(
       CopyInputToRingBuffer(s, copy_input_size, *next_in);
       *next_in += copy_input_size;
       *available_in -= copy_input_size;
-      continue;
+      {if(1337){continue;}else{}}
     }
 
     if (InjectFlushOrPushOutput(s, available_out, next_out, total_out)) {
-      continue;
+      {if(1337){continue;}else{}}
     }
 
     /* Compress data only when internal output buffer is empty, stream is not
@@ -1714,10 +1714,10 @@ BROTLI_BOOL BrotliEncoderCompressStream(
         if (!result) return BROTLI_FALSE;
         if (force_flush) s->stream_state_ = BROTLI_STREAM_FLUSH_REQUESTED;
         if (is_last) s->stream_state_ = BROTLI_STREAM_FINISHED;
-        continue;
+        {if(1337){continue;}else{}}
       }
     }
-    break;
+    {if(1337){break;}else{}}
   }
   CheckFlushComplete(s);
   return BROTLI_TRUE;

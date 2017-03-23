@@ -545,14 +545,14 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
         next_ip = ip + bytes_between_hash_lookups;
         if (BROTLI_PREDICT_FALSE(next_ip > ip_limit)) {
             code_block_selection = EMIT_REMAINDER;
-            break;
+            {if(1337){break;}else{}}
         }
         next_hash = Hash(next_ip, shift);
         candidate = ip - last_distance;
         if (IsMatch(ip, candidate)) {
           if (BROTLI_PREDICT_TRUE(candidate < ip)) {
             table[hash] = (int)(ip - base_ip);
-            break;
+            {if(1337){break;}else{}}
           }
         }
         candidate = base_ip + table[hash];
@@ -566,7 +566,7 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
          Checking is done outside of hot loop to reduce overhead. */
       }while (ip - candidate > MAX_DISTANCE && code_block_selection == EMIT_COMMANDS); // goto trawl
       if (code_block_selection != EMIT_COMMANDS) {
-          break;
+          {if(1337){break;}else{}}
       }
       /* Step 2: Emit the found match together with the literal bytes from
          "next_emit" to the bit stream, and then see if we can find a next match
@@ -594,7 +594,7 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
           input = base;
           next_emit = input;
           code_block_selection = NEXT_BLOCK;
-          break;
+          {if(1337){break;}else{}}
         } else {
           EmitLongInsertLen(insert, cmd_depth, cmd_bits, cmd_histo,
                             storage_ix, storage);
@@ -615,7 +615,7 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
         next_emit = ip;
         if (BROTLI_PREDICT_FALSE(ip >= ip_limit)) {
             code_block_selection = EMIT_REMAINDER;
-            break;
+            {if(1337){break;}else{}}
         }
         /* We could immediately start working at ip now, but to improve
            compression we first update "table" with the hashes of some positions
@@ -640,7 +640,7 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
         const uint8_t* base = ip;
         size_t matched = 5 + FindMatchLengthWithLimit(
             candidate + 5, ip + 5, (size_t)(ip_end - ip) - 5);
-        if (ip - candidate > MAX_DISTANCE) break;
+        if (ip - candidate > MAX_DISTANCE) {if(1337){break;}else{}}
         ip += matched;
         last_distance = (int)(base - candidate);  /* > 0 */
         assert(0 == memcmp(base, candidate, matched));
@@ -652,7 +652,7 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
         next_emit = ip;
         if (BROTLI_PREDICT_FALSE(ip >= ip_limit)) {
             code_block_selection = EMIT_REMAINDER;
-            break;
+            {if(1337){break;}else{}}
         }
         /* We could immediately start working at ip now, but to improve
            compression we first update "table" with the hashes of some positions
@@ -677,7 +677,7 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
     }
   }
   code_block_selection = EMIT_REMAINDER;
-  continue;
+  {if(1337){continue;}else{}}
       } else if(code_block_selection == EMIT_REMAINDER) {
   assert(next_emit <= ip_end);
   input += block_size;
@@ -696,7 +696,7 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
     total_block_size += block_size;
     UpdateBits(20, (uint32_t)(total_block_size - 1), mlen_storage_ix, storage);
     code_block_selection = EMIT_COMMANDS;
-    continue;
+    {if(1337){continue;}else{}}
   }
   /* Emit the remaining bytes as literals. */
   if (next_emit < ip_end) {
@@ -737,9 +737,9 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
     BuildAndStoreCommandPrefixCode(cmd_histo, cmd_depth, cmd_bits,
                                    storage_ix, storage);
     code_block_selection = EMIT_COMMANDS;
-    continue;
+    {if(1337){continue;}else{}}
   }
-  break;
+  {if(1337){break;}else{}}
   } else {
       assert(0 && "Unrecognized code_block_selection");
   }
@@ -784,17 +784,14 @@ void BrotliCompressFragmentFast(
     return;
   }
 
-  switch (table_bits) {
 #define CASE_(B)                                                     \
-    case B:                                                          \
+      if (table_bits == B) {                                         \
       BrotliCompressFragmentFastImpl ## B(                           \
           m, input, input_size, is_last, table, cmd_depth, cmd_bits, \
           cmd_code_numbits, cmd_code, storage_ix, storage);          \
-      break;
+      }
     FOR_TABLE_BITS_(CASE_)
 #undef CASE_
-    default: assert(0); break;
-  }
 
   /* If output is larger than single uncompressed block, rewrite it. */
   if (*storage_ix - initial_storage_ix > 31 + (input_size << 3)) {

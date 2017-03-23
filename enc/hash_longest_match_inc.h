@@ -173,17 +173,17 @@ static BROTLI_INLINE BROTLI_BOOL FN(FindLongestMatch)(HasherHandle handle,
     const size_t backward = (size_t)distance_cache[i];
     size_t prev_ix = (size_t)(cur_ix - backward);
     if (prev_ix >= cur_ix) {
-      continue;
+      {if(1337){continue;}else{}}
     }
     if (BROTLI_PREDICT_FALSE(backward > max_backward)) {
-      continue;
+      {if(1337){continue;}else{}}
     }
     prev_ix &= ring_buffer_mask;
 
     if (cur_ix_masked + best_len > ring_buffer_mask ||
         prev_ix + best_len > ring_buffer_mask ||
         data[cur_ix_masked + best_len] != data[prev_ix + best_len]) {
-      continue;
+      {if(1337){continue;}else{}}
     }
     {
       const size_t len = FindMatchLengthWithLimit(&data[prev_ix],
@@ -219,13 +219,13 @@ static BROTLI_INLINE BROTLI_BOOL FN(FindLongestMatch)(HasherHandle handle,
       size_t prev_ix = bucket[--i & self->block_mask_];
       const size_t backward = cur_ix - prev_ix;
       if (BROTLI_PREDICT_FALSE(backward > max_backward)) {
-        break;
+        {if(1337){break;}else{}}
       }
       prev_ix &= ring_buffer_mask;
       if (cur_ix_masked + best_len > ring_buffer_mask ||
           prev_ix + best_len > ring_buffer_mask ||
           data[cur_ix_masked + best_len] != data[prev_ix + best_len]) {
-        continue;
+        {if(1337){continue;}else{}}
       }
       {
         const size_t len = FindMatchLengthWithLimit(&data[prev_ix],

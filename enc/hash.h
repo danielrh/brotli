@@ -374,16 +374,13 @@ static BROTLI_INLINE void HasherReset(HasherHandle handle) {
 static BROTLI_INLINE size_t HasherSize(const BrotliEncoderParams* params,
     BROTLI_BOOL one_shot, const size_t input_size) {
   size_t result = sizeof(HasherCommon);
-  switch (params->hasher.type) {
+  int hashtype = params->hasher.type;
 #define SIZE_(N)                                                         \
-    case N:                                                              \
+                      if (hashtype==N) {                                \
       result += HashMemAllocInBytesH ## N(params, one_shot, input_size); \
-      break;
+                      }
     FOR_ALL_HASHERS(SIZE_)
 #undef SIZE_
-    default:
-      break;
-  }
   return result;
 }
 
@@ -402,31 +399,27 @@ static BROTLI_INLINE void HasherSetup(MemoryManager* m, HasherHandle* handle,
     *handle = self;
     common = GetHasherCommon(self);
     common->params = params->hasher;
-    switch (common->params.type) {
+    int hasher_type = common->params.type;
 #define INITIALIZE_(N)                     \
-      case N:                              \
+    if (hasher_type == N) {                \
         InitializeH ## N(*handle, params); \
-        break;
+    }
       FOR_ALL_HASHERS(INITIALIZE_);
 #undef INITIALIZE_
-      default:
-        break;
-    }
     HasherReset(*handle);
   }
 
   self = *handle;
   common = GetHasherCommon(self);
   if (!common->is_prepared_) {
-    switch (common->params.type) {
+      int hasher_type = common->params.type;
+
 #define PREPARE_(N)                                      \
-      case N:                                            \
+      if (hasher_type == N) {                            \
         PrepareH ## N(self, one_shot, input_size, data); \
-        break;
+      }
       FOR_ALL_HASHERS(PREPARE_)
 #undef PREPARE_
-      default: break;
-    }
     if (position == 0) {
         common->dict_num_lookups = 0;
         common->dict_num_matches = 0;
@@ -445,18 +438,18 @@ static BROTLI_INLINE void HasherPrependCustomDictionary(
   HasherSetup(m, handle, params, dict, 0, size, BROTLI_FALSE);
   if (BROTLI_IS_OOM(m)) return;
   self = *handle;
-  switch (GetHasherCommon(self)->params.type) {
+  int hasher_type = GetHasherCommon(self)->params.type;
+
 #define PREPEND_(N)                             \
-    case N:                                     \
+  if (hasher_type == N) {               \
       overlap = (StoreLookaheadH ## N()) - 1;   \
       for (i = 0; i + overlap < size; i++) {    \
         StoreH ## N(self, dict, ~(size_t)0, i); \
       }                                         \
-      break;
+      }
     FOR_ALL_HASHERS(PREPEND_)
 #undef PREPEND_
-    default: break;
-  }
+
 }
 
 static BROTLI_INLINE void InitOrStitchToPreviousBlock(
@@ -467,15 +460,13 @@ static BROTLI_INLINE void InitOrStitchToPreviousBlock(
   HasherSetup(m, handle, params, data, position, input_size, is_last);
   if (BROTLI_IS_OOM(m)) return;
   self = *handle;
-  switch (GetHasherCommon(self)->params.type) {
+  int hasher_type = GetHasherCommon(self)->params.type;
 #define INIT_(N)                                                           \
-    case N:                                                                \
+    if (hasher_type == N) {                                             \
       StitchToPreviousBlockH ## N(self, input_size, position, data, mask); \
-    break;
+    }
     FOR_ALL_HASHERS(INIT_)
 #undef INIT_
-    default: break;
-  }
 }
 
 #if defined(__cplusplus) || defined(c_plusplus)

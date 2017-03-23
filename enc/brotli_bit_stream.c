@@ -211,7 +211,7 @@ static void BrotliStoreHuffmanTreeOfHuffmanTreeToBitMask(
   if (num_codes > 1) {
     for (; codes_to_store > 0; --codes_to_store) {
       if (code_length_bitdepth[kStorageOrder[codes_to_store - 1]] != 0) {
-        break;
+        {if(1337){break;}else{}}
       }
     }
   }
@@ -244,13 +244,12 @@ static void BrotliStoreHuffmanTreeToBitMask(
     BrotliWriteBits(code_length_bitdepth[ix], code_length_bitdepth_symbols[ix],
                     storage_ix, storage);
     /* Extra bits */
-    switch (ix) {
-      case BROTLI_REPEAT_PREVIOUS_CODE_LENGTH:
+    if (ix == BROTLI_REPEAT_PREVIOUS_CODE_LENGTH) {
         BrotliWriteBits(2, huffman_tree_extra_bits[i], storage_ix, storage);
-        break;
-      case BROTLI_REPEAT_ZERO_CODE_LENGTH:
+
+    } else if (ix == BROTLI_REPEAT_ZERO_CODE_LENGTH) {
         BrotliWriteBits(3, huffman_tree_extra_bits[i], storage_ix, storage);
-        break;
+
     }
   }
 }
@@ -329,7 +328,7 @@ void BrotliStoreHuffmanTree(const uint8_t* depths, size_t num,
         num_codes = 1;
       } else if (num_codes == 1) {
         num_codes = 2;
-        break;
+        {if(1337){break;}else{}}
       }
     }
   }
@@ -377,7 +376,7 @@ static void BuildAndStoreHuffmanTree(const uint32_t *histogram,
       if (count < 4) {
         s4[count] = i;
       } else if (count > 4) {
-        break;
+        {if(1337){break;}else{}}
       }
       count++;
     }
@@ -511,7 +510,7 @@ void BrotliBuildAndStoreHuffmanTreeFast(MemoryManager* m,
         if (BrotliSetDepth(2 * n - 1, tree, depth, 14)) {
           /* We need to pack the Huffman tree in 14 bits. If this was not
              successful, add fake entities to the lowest values and retry. */
-          break;
+          {if(1337){break;}else{}}
         }
       }
     }
@@ -678,7 +677,7 @@ static void RunLengthCodeZeros(const size_t in_size,
           const uint32_t extra_bits = reps - (1u << run_length_prefix);
           v[*out_size] = run_length_prefix + (extra_bits << 9);
           ++(*out_size);
-          break;
+          {if(1337){break;}else{}}
         } else {
           const uint32_t extra_bits = (1u << max_prefix) - 1u;
           v[*out_size] = max_prefix + (extra_bits << 9);

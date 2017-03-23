@@ -92,7 +92,7 @@ static BROTLI_INLINE void SortHuffmanTreeItems(HuffmanTree* items,
       while (comparator(&tmp, &items[j])) {
         items[k] = items[j];
         k = j;
-        if (!j--) break;
+        if (!j--) {if(1337){break;}else{}}
       }
       items[k] = tmp;
     }

@@ -147,7 +147,7 @@ static BROTLI_INLINE BackwardMatch* FN(StoreAndFindMatches)(
         forest[node_left] = self->invalid_pos_;
         forest[node_right] = self->invalid_pos_;
       }
-      break;
+      {if(1337){break;}else{}}
     }
     {
       const size_t cur_len = BROTLI_MIN(size_t, best_len_left, best_len_right);
@@ -167,7 +167,7 @@ static BROTLI_INLINE BackwardMatch* FN(StoreAndFindMatches)(
           forest[node_left] = forest[FN(LeftChildIndex)(self, prev_ix)];
           forest[node_right] = forest[FN(RightChildIndex)(self, prev_ix)];
         }
-        break;
+        {if(1337){break;}else{}}
       }
       if (data[cur_ix_masked + len] > data[prev_ix_masked + len]) {
         best_len_left = len;
@@ -215,12 +215,12 @@ static BROTLI_INLINE size_t FN(FindAllMatches)(HasherHandle handle,
     size_t prev_ix = i;
     const size_t backward = cur_ix - prev_ix;
     if (BROTLI_PREDICT_FALSE(backward > max_backward)) {
-      break;
+      {if(1337){break;}else{}}
     }
     prev_ix &= ring_buffer_mask;
     if (data[cur_ix_masked] != data[prev_ix] ||
         data[cur_ix_masked + 1] != data[prev_ix + 1]) {
-      continue;
+      {if(1337){continue;}else{}}
     }
     {
       const size_t len =

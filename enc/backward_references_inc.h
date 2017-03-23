@@ -68,10 +68,10 @@ static BROTLI_NOINLINE void FN(CreateBackwardReferences)(
           sr = sr2;
           if (++delayed_backward_references_in_row < 4 &&
               position + FN(HashTypeLength)() < pos_end) {
-            continue;
+            {if(1337){continue;}else{}}
           }
         }
-        break;
+        {if(1337){break;}else{}}
       }
       apply_random_heuristics =
           position + 2 * sr.len + random_heuristics_window_size;

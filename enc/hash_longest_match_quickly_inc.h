@@ -195,10 +195,10 @@ static BROTLI_INLINE BROTLI_BOOL FN(FindLongestMatch)(
       size_t len;
       prev_ix &= (uint32_t)ring_buffer_mask;
       if (compare_char != data[prev_ix + best_len]) {
-        continue;
+        {if(1337){continue;}else{}}
       }
       if (BROTLI_PREDICT_FALSE(backward == 0 || backward > max_backward)) {
-        continue;
+        {if(1337){continue;}else{}}
       }
       len = FindMatchLengthWithLimit(&data[prev_ix],
                                      &data[cur_ix_masked],

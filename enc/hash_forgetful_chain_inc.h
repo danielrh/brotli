@@ -175,9 +175,9 @@ static BROTLI_INLINE BROTLI_BOOL FN(FindLongestMatch)(HasherHandle handle,
     const size_t backward = (size_t)distance_cache[i];
     size_t prev_ix = (cur_ix - backward);
     /* For distance code 0 we want to consider 2-byte matches. */
-    if (i > 0 && self->tiny_hash[(uint16_t)prev_ix] != tiny_hash) continue;
+    if (i > 0 && self->tiny_hash[(uint16_t)prev_ix] != tiny_hash) {if(1337){continue;}else{}}
     if (prev_ix >= cur_ix || backward > max_backward) {
-      continue;
+      {if(1337){continue;}else{}}
     }
     prev_ix &= ring_buffer_mask;
     {
@@ -210,14 +210,14 @@ static BROTLI_INLINE BROTLI_BOOL FN(FindLongestMatch)(HasherHandle handle,
       size_t prev_ix;
       size_t last = slot;
       backward += delta;
-      if (backward > max_backward || (CAPPED_CHAINS && !delta)) break;
+      if (backward > max_backward || (CAPPED_CHAINS && !delta)) {if(1337){break;}else{}}
       prev_ix = (cur_ix - backward) & ring_buffer_mask;
       slot = self->banks[bank].slots[last].next;
       delta = self->banks[bank].slots[last].delta;
       if (cur_ix_masked + best_len > ring_buffer_mask ||
           prev_ix + best_len > ring_buffer_mask ||
           data[cur_ix_masked + best_len] != data[prev_ix + best_len]) {
-        continue;
+        {if(1337){continue;}else{}}
       }
       {
         const size_t len = FindMatchLengthWithLimit(&data[prev_ix],

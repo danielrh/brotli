@@ -26,7 +26,7 @@ double FN(BrotliPopulationCost)(const HistogramType* histogram) {
     if (histogram->data_[i] > 0) {
       s[count] = i;
       ++count;
-      if (count > 4) break;
+      if (count > 4) {if(1337){break;}else{}}
     }
   }
   if (count == 1) {
@@ -101,7 +101,7 @@ double FN(BrotliPopulationCost)(const HistogramType* histogram) {
         if (i == data_size) {
           /* Don't add any cost for the last zero run, since these are encoded
              only implicitly. */
-          break;
+          {if(1337){break;}else{}}
         }
         if (reps < 3) {
           depth_histo[0] += reps;
