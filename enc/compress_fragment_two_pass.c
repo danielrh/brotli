@@ -497,7 +497,7 @@ static BROTLI_INLINE void CreateCommands(const uint8_t* input,
     }
   }
 
-emit_remainder:
+
   assert(next_emit <= ip_end);
   /* Emit the remaining bytes as literals. */
   if (next_emit < ip_end) {

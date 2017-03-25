@@ -162,19 +162,22 @@ typedef enum ContextType {
 } ContextType;
 
 static BROTLI_INLINE uint8_t Context(uint8_t p1, uint8_t p2, ContextType mode) {
-  switch (mode) {
-    case CONTEXT_LSB6:
+    if (mode == CONTEXT_LSB6) {
       return p1 & 0x3f;
-    case CONTEXT_MSB6:
+    }
+    if (mode == CONTEXT_MSB6) {
       return (uint8_t)(p1 >> 2);
-    case CONTEXT_UTF8:
+    }
+    if (mode == CONTEXT_UTF8) {
       return kUTF8ContextLookup[p1] | kUTF8ContextLookup[p2 + 256];
-    case CONTEXT_SIGNED:
+    }
+    
+    if (mode == CONTEXT_SIGNED) {
       return (uint8_t)((kSigned3BitContextLookup[p1] << 3) +
                        kSigned3BitContextLookup[p2]);
-    default:
+    }
       return 0;
-  }
+
 }
 
 #if defined(__cplusplus) || defined(c_plusplus)

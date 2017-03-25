@@ -25,8 +25,8 @@
 #include "./memory.h"
 #include "./port.h"
 #include "./write_bits.h"
-
-
+#undef assert
+#define assert(x)
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
 #endif

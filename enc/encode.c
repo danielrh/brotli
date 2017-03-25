@@ -135,34 +135,33 @@ BROTLI_BOOL BrotliEncoderSetParameter(
   /* Changing parameters on the fly is not implemented yet. */
   if (state->is_initialized_) return BROTLI_FALSE;
   /* TODO: Validate/clamp parameters here. */
-  switch (p) {
-    case BROTLI_PARAM_MODE:
+
+  if (p== BROTLI_PARAM_MODE) {
       state->params.mode = (BrotliEncoderMode)value;
       return BROTLI_TRUE;
-
-    case BROTLI_PARAM_QUALITY:
+  }
+  if (p== BROTLI_PARAM_QUALITY) {
       state->params.quality = (int)value;
       return BROTLI_TRUE;
-
-    case BROTLI_PARAM_LGWIN:
+  }
+  if (p== BROTLI_PARAM_LGWIN) {
       state->params.lgwin = (int)value;
       return BROTLI_TRUE;
-
-    case BROTLI_PARAM_LGBLOCK:
+  }
+  if(p==BROTLI_PARAM_LGBLOCK) {
       state->params.lgblock = (int)value;
       return BROTLI_TRUE;
-
-    case BROTLI_PARAM_DISABLE_LITERAL_CONTEXT_MODELING:
+  }
+  if (p== BROTLI_PARAM_DISABLE_LITERAL_CONTEXT_MODELING) {
       if ((value != 0) && (value != 1)) return BROTLI_FALSE;
       state->params.disable_literal_context_modeling = TO_BROTLI_BOOL(!!value);
       return BROTLI_TRUE;
-
-    case BROTLI_PARAM_SIZE_HINT:
+  }
+  if (p== BROTLI_PARAM_SIZE_HINT) {
       state->params.size_hint = value;
       return BROTLI_TRUE;
-
-    default: return BROTLI_FALSE;
   }
+   return BROTLI_FALSE;
 }
 
 static void RecomputeDistancePrefixes(Command* cmds,
@@ -1276,7 +1275,7 @@ static BROTLI_BOOL BrotliCompressBufferQuality10(
   DestroyHasher(m, &hasher);
   return ok;
 
-oom:
+
   BrotliWipeOutMemoryManager(m);
   return BROTLI_FALSE;
 }
