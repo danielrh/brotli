@@ -451,21 +451,21 @@ void BrotliBuildAndStoreHuffmanTreeFast(MemoryManager* m,
     uint32_t count_limit;
     if (BROTLI_IS_OOM(m)) return;
     for (count_limit = 1; ; count_limit *= 2) {
-      HuffmanTree* node = tree;
+      unsigned int node_index = 0;
       size_t l;
       for (l = length; l != 0;) {
         --l;
         if (histogram[l]) {
           if (BROTLI_PREDICT_TRUE(histogram[l] >= count_limit)) {
-            InitHuffmanTree(node, histogram[l], -1, (int16_t)l);
+            InitHuffmanTree(&tree[node_index], histogram[l], -1, (int16_t)l);
           } else {
-            InitHuffmanTree(node, count_limit, -1, (int16_t)l);
+            InitHuffmanTree(&tree[node_index], count_limit, -1, (int16_t)l);
           }
-          ++node;
+          ++node_index;
         }
       }
       {
-        const int n = (int)(node - tree);
+        const int n = node_index;
         HuffmanTree sentinel;
         int i = 0;      /* Points to the next leaf node. */
         int j = n + 1;  /* Points to the next non-leaf node. */
@@ -480,8 +480,9 @@ void BrotliBuildAndStoreHuffmanTreeFast(MemoryManager* m,
            [2n]: we add a sentinel at the end as well.
            There will be (2n+1) elements at the end. */
         InitHuffmanTree(&sentinel, BROTLI_UINT32_MAX, -1, -1);
-        *node++ = sentinel;
-        *node++ = sentinel;
+        tree[node_index + 1] = sentinel;
+        tree[node_index] = sentinel;
+        node_index += 2;
 
         for (k = n - 1; k > 0; --k) {
           int left, right;
@@ -500,12 +501,13 @@ void BrotliBuildAndStoreHuffmanTreeFast(MemoryManager* m,
             ++j;
           }
           /* The sentinel node becomes the parent node. */
-          node[-1].total_count_ =
+          tree[node_index-1].total_count_ =
               tree[left].total_count_ + tree[right].total_count_;
-          node[-1].index_left_ = (int16_t)left;
-          node[-1].index_right_or_value_ = (int16_t)right;
+          tree[node_index-1].index_left_ = (int16_t)left;
+          tree[node_index-1].index_right_or_value_ = (int16_t)right;
           /* Add back the last sentinel node. */
-          *node++ = sentinel;
+          tree[node_index] = sentinel;
+          node_index += 1;
         }
         if (BrotliSetDepth(2 * n - 1, tree, depth, 14)) {
           /* We need to pack the Huffman tree in 14 bits. If this was not
