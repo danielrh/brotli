@@ -167,18 +167,18 @@ BROTLI_INTERNAL double FN(BrotliHistogramBitCostDistance)(
    When called, clusters[0..num_clusters) contains the unique values from
    symbols[0..in_size), but this property is not preserved in this function.
    Note: we assume that out[]->bit_cost_ is already up-to-date. */
-BROTLI_INTERNAL void FN(BrotliHistogramRemap)(const HistogramType* in,
+BROTLI_INTERNAL void FN(BrotliHistogramRemap)(const HistogramType* inp,
     size_t in_size, const uint32_t* clusters, size_t num_clusters,
     HistogramType* out, uint32_t* symbols) CODE({
   size_t i;
   for (i = 0; i < in_size; ++i) {
     uint32_t best_out = i == 0 ? symbols[0] : symbols[i - 1];
     double best_bits =
-        FN(BrotliHistogramBitCostDistance)(&in[i], &out[best_out]);
+        FN(BrotliHistogramBitCostDistance)(&inp[i], &out[best_out]);
     size_t j;
     for (j = 0; j < num_clusters; ++j) {
       const double cur_bits =
-          FN(BrotliHistogramBitCostDistance)(&in[i], &out[clusters[j]]);
+          FN(BrotliHistogramBitCostDistance)(&inp[i], &out[clusters[j]]);
       if (cur_bits < best_bits) {
         best_bits = cur_bits;
         best_out = clusters[j];
@@ -192,7 +192,7 @@ BROTLI_INTERNAL void FN(BrotliHistogramRemap)(const HistogramType* in,
     FN(HistogramClear)(&out[clusters[i]]);
   }
   for (i = 0; i < in_size; ++i) {
-    FN(HistogramAddHistogram)(&out[symbols[i]], &in[i]);
+    FN(HistogramAddHistogram)(&out[symbols[i]], &inp[i]);
   }
 })
 
@@ -245,7 +245,7 @@ BROTLI_INTERNAL size_t FN(BrotliHistogramReindex)(MemoryManager* m,
 })
 
 BROTLI_INTERNAL void FN(BrotliClusterHistograms)(
-    MemoryManager* m, const HistogramType* in, const size_t in_size,
+    MemoryManager* m, const HistogramType* inp, const size_t in_size,
     size_t max_histograms, HistogramType* out, size_t* out_size,
     uint32_t* histogram_symbols) CODE({
   uint32_t* cluster_size = BROTLI_ALLOC(m, uint32_t, in_size);
@@ -264,8 +264,8 @@ BROTLI_INTERNAL void FN(BrotliClusterHistograms)(
   }
 
   for (i = 0; i < in_size; ++i) {
-    out[i] = in[i];
-    out[i].bit_cost_ = FN(BrotliPopulationCost)(&in[i]);
+    out[i] = inp[i];
+    out[i].bit_cost_ = FN(BrotliPopulationCost)(&inp[i]);
     histogram_symbols[i] = (uint32_t)i;
   }
 
@@ -304,7 +304,7 @@ BROTLI_INTERNAL void FN(BrotliClusterHistograms)(
   BROTLI_FREE(m, pairs);
   BROTLI_FREE(m, cluster_size);
   /* Find the optimal map from original histograms to the final ones. */
-  FN(BrotliHistogramRemap)(in, in_size, clusters, num_clusters,
+  FN(BrotliHistogramRemap)(inp, in_size, clusters, num_clusters,
                            out, histogram_symbols);
   BROTLI_FREE(m, clusters);
   /* Convert the context map to a canonical form. */

@@ -63,7 +63,12 @@ static BROTLI_INLINE uint16_t CombineLengthCodes(
   uint16_t bits64 =
       (uint16_t)((copycode & 0x7u) | ((inscode & 0x7u) << 3));
   if (use_last_distance && inscode < 8 && copycode < 16) {
-    return (copycode < 8) ? bits64 : (bits64 | 64);
+      if (copycode < 8) {
+          return bits64;
+      } else {
+          uint16_t s64 = 64;
+          return bits64 | s64;
+      }
   } else {
     /* Specification: 5 Encoding of ... (last table) */
     /* offset = 2 * index, where index is in range [0..8] */
