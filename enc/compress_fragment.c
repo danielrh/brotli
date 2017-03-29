@@ -443,7 +443,6 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
     size_t* storage_ix, uint8_t* storage) {
   uint32_t cmd_histo[128];
   const uint8_t* ip_end;
-
   /* "next_emit" is a pointer to the first byte that is not covered by a
      previous copy. Bytes between "next_emit" and the start of the next copy or
      the end of the input will be emitted as literal bytes. */
@@ -670,6 +669,9 @@ static BROTLI_INLINE void BrotliCompressFragmentFastImpl(
           candidate = base_ip + table[cur_hash];
           table[cur_hash] = (int)(ip - base_ip);
         }
+      }
+      if (code_block_selection == EMIT_REMAINDER) {
+          break; // follow above break statement: going to emit_remainder
       }
       if (code_block_selection == EMIT_COMMANDS) {
         next_hash = Hash(++ip, shift);

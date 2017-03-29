@@ -18,7 +18,7 @@ $BRO
 """
 
 for file in $INPUTS; do
-  for quality in 1 6 9 11; do
+  for quality in 0 1 2 3 4 5 6 7 8 9 10 11; do
     echo "Roundtrip testing $file at quality $quality"
     compressed=${TMP_DIR}/${file##*/}.bro
     uncompressed=${TMP_DIR}/${file##*/}.unbro
