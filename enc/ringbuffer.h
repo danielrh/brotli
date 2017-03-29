@@ -43,14 +43,14 @@ typedef struct RingBuffer {
      and the copy of the beginning as a tail. */
   uint8_t *data_;
   /* The start of the ring-buffer. */
-  uint8_t *buffer_;
+  size_t buffer_index;
 } RingBuffer;
 
 static BROTLI_INLINE void RingBufferInit(RingBuffer* rb) {
   rb->cur_size_ = 0;
   rb->pos_ = 0;
   rb->data_ = 0;
-  rb->buffer_ = 0;
+  rb->buffer_index = 0;
 }
 
 static BROTLI_INLINE void RingBufferSetup(
@@ -83,10 +83,10 @@ static BROTLI_INLINE void RingBufferInitBuffer(
   }
   rb->data_ = new_data;
   rb->cur_size_ = buflen;
-  rb->buffer_ = rb->data_ + 2;
-  rb->buffer_[-2] = rb->buffer_[-1] = 0;
+  rb->buffer_index = 2;
+  rb->data_[rb->buffer_index-2] = rb->data_[rb->buffer_index-1] = 0;
   for (i = 0; i < kSlackForEightByteHashingEverywhere; ++i) {
-    rb->buffer_[rb->cur_size_ + i] = 0;
+    rb->data_[rb->buffer_index + rb->cur_size_ + i] = 0;
   }
 }
 
@@ -96,7 +96,7 @@ static BROTLI_INLINE void RingBufferWriteTail(
   if (BROTLI_PREDICT_FALSE(masked_pos < rb->tail_size_)) {
     /* Just fill the tail buffer with the beginning data. */
     const size_t p = rb->size_ + masked_pos;
-    memcpy(&rb->buffer_[p], bytes,
+    memcpy(&rb->data_[rb->buffer_index+p], bytes,
         BROTLI_MIN(size_t, n, rb->tail_size_ - masked_pos));
   }
 }
@@ -114,7 +114,7 @@ static BROTLI_INLINE void RingBufferWrite(
     rb->pos_ = (uint32_t)n;
     RingBufferInitBuffer(m, rb->pos_, rb);
     if (BROTLI_IS_OOM(m)) return;
-    memcpy(rb->buffer_, bytes, n);
+    memcpy(&rb->data_[rb->buffer_index], bytes, n);
     return;
   }
   if (rb->cur_size_ < rb->total_size_) {
@@ -123,8 +123,8 @@ static BROTLI_INLINE void RingBufferWrite(
     if (BROTLI_IS_OOM(m)) return;
     /* Initialize the last two bytes to zero, so that we don't have to worry
        later when we copy the last two bytes to the first two positions. */
-    rb->buffer_[rb->size_ - 2] = 0;
-    rb->buffer_[rb->size_ - 1] = 0;
+    rb->data_[rb->buffer_index+rb->size_ - 2] = 0;
+    rb->data_[rb->buffer_index+rb->size_ - 1] = 0;
   }
   {
     const size_t masked_pos = rb->pos_ & rb->mask_;
@@ -133,19 +133,19 @@ static BROTLI_INLINE void RingBufferWrite(
     RingBufferWriteTail(bytes, n, rb);
     if (BROTLI_PREDICT_TRUE(masked_pos + n <= rb->size_)) {
       /* A single write fits. */
-      memcpy(&rb->buffer_[masked_pos], bytes, n);
+      memcpy(&rb->data_[rb->buffer_index+masked_pos], bytes, n);
     } else {
       /* Split into two writes.
          Copy into the end of the buffer, including the tail buffer. */
-      memcpy(&rb->buffer_[masked_pos], bytes,
+      memcpy(&rb->data_[rb->buffer_index+masked_pos], bytes,
              BROTLI_MIN(size_t, n, rb->total_size_ - masked_pos));
       /* Copy into the beginning of the buffer */
-      memcpy(&rb->buffer_[0], bytes + (rb->size_ - masked_pos),
+      memcpy(&rb->data_[rb->buffer_index+0], bytes + (rb->size_ - masked_pos),
              n - (rb->size_ - masked_pos));
     }
   }
-  rb->buffer_[-2] = rb->buffer_[rb->size_ - 2];
-  rb->buffer_[-1] = rb->buffer_[rb->size_ - 1];
+  rb->data_[rb->buffer_index-2] = rb->data_[rb->buffer_index+rb->size_ - 2];
+  rb->data_[rb->buffer_index-1] = rb->data_[rb->buffer_index+rb->size_ - 1];
   rb->pos_ += (uint32_t)n;
   if (rb->pos_ > (1u << 30)) {
     /* Wrap, but preserve not-a-first-lap feature. */

@@ -744,7 +744,7 @@ static void CopyInputToRingBuffer(BrotliEncoderState* s,
        memory. Due to performance reasons, hashing reads data using a
        LOAD64, which can go 7 bytes beyond the bytes written in the
        ring-buffer. */
-    memset(ringbuffer_->buffer_ + ringbuffer_->pos_, 0, 7);
+    memset(&ringbuffer_->data_[ringbuffer_->buffer_index + ringbuffer_->pos_], 0, 7);
   }
 }
 
@@ -812,7 +812,7 @@ static BROTLI_BOOL EncodeData(
   const BrotliDictionary* dictionary = BrotliGetDictionary();
 
   if (!EnsureInitialized(s)) return BROTLI_FALSE;
-  data = s->ringbuffer_.buffer_;
+  data = &s->ringbuffer_.data_[s->ringbuffer_.buffer_index];
   mask = s->ringbuffer_.mask_;
 
   /* Adding more blocks after "last" block is forbidden. */
