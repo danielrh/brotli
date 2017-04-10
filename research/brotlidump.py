@@ -8,17 +8,29 @@ I found the following issues with the Brotli format:
 - The block type code is useless if NBLTYPES==2, you would only need 1 symbol
   anyway, so why don't you just switch to "the other" type?
 """
+import traceback
 import struct
+import sys
 from operator import itemgetter, methodcaller
 from itertools import accumulate, repeat
 from collections import defaultdict, deque
 from functools import partial
-
+from string import digits
 class InvalidStream(Exception): pass
 #lookup table
 L, I, D = "literal", "insert&copy", "distance"
 pL, pI, pD = 'P'+L, 'P'+I, 'P'+D
-
+billing = defaultdict(lambda:0)
+decompressed_fp = open('decompressed','wb')
+last_pos = 0
+def add_bill(bill_name, leng, stream):
+    global last_pos
+    billing[bill_name] += leng
+    if last_pos + leng != stream.pos:
+        print(bill_name, last_pos + leng, '!=', stream.pos,'('+str(leng)+')',file=sys.stderr)
+        last_pos = stream.pos
+    else:
+        last_pos += leng
 def outputCharFormatter(c):
     """Show character in readable format
     """
@@ -646,7 +658,13 @@ class LengthAlphabet(WithExtra):
         else: return 'len {}'.format(index)
 
     def explanation(self, index, extra):
-        return self.description.format(self[index], extra)
+        try:
+            return self.description.format(self[index], extra)
+        except ValueError:
+#            traceback.print_exc()
+            ret = self.description.replace("{}", '~`').replace("{", "OPEN BRACE").replace("{", "CLOSE BRACE").replace("~`", "{}")
+            return self.description
+#            return ret.format(self[index], extra)
 
     def value(self, index, extra):
         #the caller got the length already, so extra is enough
@@ -1265,6 +1283,7 @@ class WordList:
     def __init__(self):
         self.file = open('dict', 'rb')
         self.compileActions()
+        assert self.word(7, 35555) == b'Program to '
 
     def word(self, size, dist):
         """Get word
@@ -1649,6 +1668,10 @@ class Layout:
             context+alphabet.name,
             symbol if skipExtra else symbol.explanation(extra),
             ))
+        bill_name = alphabet.name.split('#')[0].translate(str.maketrans('','', digits+'#'))
+        if bill_name=='':
+            bill_name = alphabet.name.translate(str.maketrans('','', digits+'#'))
+        add_bill(bill_name, self.stream.pos - pos, self.stream)
         #jump to the right if we started with a '|'
         #because we didn't jump before printing
         if bitdata.startswith('|'): self.bitPtr = self.width
@@ -1679,6 +1702,7 @@ class Layout:
             self.verboseRead(FillerAlphabet(streamPos=self.stream.pos))
             print('Uncompressed data:')
             self.output += self.stream.readBytes(self.MLEN)
+            add_bill('UNC', self.MLEN * 8, self.stream)
             print(outputFormatter(self.output[-self.MLEN:]))
         return ISUNCOMPRESSED
 
@@ -1837,6 +1861,7 @@ class Layout:
                 self.prefixCodes[I][
                     self.figureBlockType(I)])
             #literal data
+            print('XXX',litLen)
             for i in range(litLen):
                 bt = self.figureBlockType(L)
                 cm = self.contextMode.getIndex()
@@ -1846,6 +1871,8 @@ class Layout:
                     context='{},{}='.format(bt,cm))
                 self.contextMode.add(char)
                 self.output.append(char)
+                
+                decompressed_fp.write(bytes([char]))
             blockLen += litLen
             #check if we're done
             if blockLen>=self.MLEN: return
@@ -1881,6 +1908,8 @@ class Layout:
                 copyLen = len(newWord)
                 comment = 'From wordlist'
             blockLen += copyLen
+            print('XXX',copyLen)
+            decompressed_fp.write(self.output[-copyLen:])
             print(' '*40,
                 comment,
                 ': "',
@@ -2359,3 +2388,13 @@ if __name__=='__main__':
         doctest.testmod(optionflags=doctest.REPORT_NDIFF
             #|doctest.FAIL_FAST
             )
+    tot = 0
+    xbilling = defaultdict(list)
+    for b in billing:
+        xbilling[billing[b]].append(b)
+    
+    for b in sorted(xbilling.keys()):
+        for v in sorted(xbilling[b]):
+            print (v, "::", b)
+            tot += b
+    print('total',tot, 'in bytes', (tot + 7)//8 )
