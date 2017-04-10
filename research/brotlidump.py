@@ -23,6 +23,7 @@ pL, pI, pD = 'P'+L, 'P'+I, 'P'+D
 billing = defaultdict(lambda:0)
 decompressed_fp = open('decompressed','wb')
 last_pos = 0
+huffman_table_construction = []
 def add_bill(bill_name, leng, stream):
     global last_pos
     billing[bill_name] += leng
@@ -1446,10 +1447,13 @@ class Layout:
         The alphabet in question must have a "logical" order,
         otherwise the assignment of symbols doesn't work.
         """
+        global huffman_table_construction
+        huffman_table_construction.append('H')
         mode, numberOfSymbols = self.verboseRead(PrefixCodeHeader(alphabet.name))
         if mode=='Complex':
             #for a complex code, numberOfSymbols means hskip
             self.readComplexCode(numberOfSymbols, alphabet)
+            huffman_table_construction.pop()
             return alphabet
         else:
             table = []
@@ -1472,6 +1476,7 @@ class Layout:
                 lengths = self.verboseRead(TreeShapeAlhabet())
             #construct the alphabet prefix code
             alphabet.setLength(dict(zip(table, lengths)))
+        huffman_table_construction.pop()
         return alphabet
 
     def readComplexCode(self, hskip, alphabet):
@@ -1671,6 +1676,8 @@ class Layout:
         bill_name = alphabet.name.split('#')[0].translate(str.maketrans('','', digits+'#'))
         if bill_name=='':
             bill_name = alphabet.name.translate(str.maketrans('','', digits+'#'))
+        if huffman_table_construction:
+            bill_name += '#HT'
         add_bill(bill_name, self.stream.pos - pos, self.stream)
         #jump to the right if we started with a '|'
         #because we didn't jump before printing
