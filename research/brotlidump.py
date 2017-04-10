@@ -2395,6 +2395,6 @@ if __name__=='__main__':
     
     for b in sorted(xbilling.keys()):
         for v in sorted(xbilling[b]):
-            print (v, "::", b)
+            print (v, "::", b, file=sys.stderr)
             tot += b
-    print('total',tot, 'in bytes', (tot + 7)//8 )
+    print('total',tot, 'in bytes', (tot + 7)//8 ,file=sys.stderr)
