@@ -142,14 +142,17 @@ BROTLI_BOOL BrotliEncoderSetParameter(
   }
   if (p== BROTLI_PARAM_QUALITY) {
       state->params.quality = (int)value;
+            fprintf(stderr, "USING Q %d\n", value);
       return BROTLI_TRUE;
   }
   if (p== BROTLI_PARAM_LGWIN) {
       state->params.lgwin = (int)value;
+      fprintf(stderr, "USING LGWIN %d\n", value);
       return BROTLI_TRUE;
   }
   if(p==BROTLI_PARAM_LGBLOCK) {
       state->params.lgblock = (int)value;
+      fprintf(stderr, "USING LGBLOCK %d\n", value);
       return BROTLI_TRUE;
   }
   if (p== BROTLI_PARAM_DISABLE_LITERAL_CONTEXT_MODELING) {

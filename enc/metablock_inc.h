@@ -104,13 +104,12 @@ static void FN(BlockSplitterFinishBlock)(
   } else if (self->block_size_ > 0) {
     double entropy = BitsEntropy(histograms[self->curr_histogram_ix_].data_,
                                  self->alphabet_size_);
-    HistogramType combined_histo[2];
+    HistogramType combined_histo[2] = {histograms[self->curr_histogram_ix_], histograms[self->curr_histogram_ix_]};
     double combined_entropy[2];
     double diff[2];
     size_t j;
     for (j = 0; j < 2; ++j) {
       size_t last_histogram_ix = self->last_histogram_ix_[j];
-      combined_histo[j] = histograms[self->curr_histogram_ix_];
       FN(HistogramAddHistogram)(&combined_histo[j],
           &histograms[last_histogram_ix]);
       combined_entropy[j] = BitsEntropy(
