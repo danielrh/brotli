@@ -7,12 +7,14 @@
 /* Brotli bit stream functions to support the low level format. There are no
    compression algorithms here, just the right ordering of bits to match the
    specs. */
-
+#include "../dec/transform.h"
+#undef BROTLI_ALLOC
+#undef BROTLI_FREE
 #include "./brotli_bit_stream.h"
 
 #include <string.h>  /* memcpy, memset */
-
 #include "../common/constants.h"
+#include "../common/dictionary.h"
 #include <brotli/types.h>
 #include "./context.h"
 #include "./entropy_encode.h"
@@ -25,7 +27,351 @@
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
 #endif
+#define LOG_META_BLOCK
 
+
+typedef struct RecoderStateX {
+    size_t num_bytes_encoded;
+} RecoderState;
+
+typedef struct InputPairX {
+    const uint8_t *first;
+    uint32_t first_len;
+
+    const uint8_t *second;
+    uint32_t second_len;    
+} InputPair;
+
+InputPair from_ptr_len(uint8_t *first,
+                       uint32_t len) {
+    InputPair retval;
+    retval.first = first;
+    retval.first_len = len;
+    retval.second = NULL;
+    retval.second_len = 0;
+    return retval;
+}
+
+InputPair InputPairFromMaskedInput(const uint8_t *input,
+                                   size_t position,
+                                   size_t len,
+                                   size_t mask) {
+    InputPair retval;
+    size_t masked_pos = position & mask;
+    if (masked_pos + len > mask + 1) {
+        size_t len1 = mask + 1 - masked_pos;
+        retval.first = &input[masked_pos];
+        retval.first_len = len1;
+        retval.second = &input[0];
+        retval.second_len = len - len1;
+    }
+    retval.first = &input[masked_pos];
+    retval.first_len = len;
+    retval.second = NULL;
+    retval.second_len = 0;
+    return retval;
+}
+    
+uint32_t plen(InputPair ip) {
+    return ip.first_len + ip.second_len;
+}
+typedef struct InputPairPairX {
+    InputPair first;
+    InputPair second;
+} InputPairPair;
+InputPairPair split_at(InputPair s, uint32_t loc) {
+    InputPairPair retval;
+    if (loc >= s.first_len) {
+        retval.first.first = s.first;
+        retval.first.first_len = s.first_len;
+        retval.first.second = s.second;
+        retval.first.second_len = loc - s.first_len;
+        retval.second.first = s.second + loc - s.first_len;
+        retval.second.first_len = s.second_len - (loc - s.first_len);
+        retval.second.second = NULL;
+        retval.second.second_len = 0;
+    } else {
+        retval.first.first = s.first;
+        retval.first.first_len = loc;
+        retval.first.second = NULL;
+        retval.first.second_len = 0;
+
+        retval.second.first = s.first + loc;
+        retval.second.first_len = s.first_len - loc;
+        retval.second.second = s.second;
+        retval.second.second_len = s.second_len;
+    }
+    return retval;
+}
+const uint8_t *pair_addr(InputPair* a, uint32_t index) {
+    if (index >= a->first_len) {
+        assert(index - a->first_len < a->second_len);
+        return &a->second[index - a->first_len];
+    }
+    return &a->first[index];
+}
+uint8_t pair_ind(InputPair *a, uint32_t index) {
+    return *pair_addr(a, index);
+}
+void print_hex(FILE * out, InputPair ip) {
+    uint32_t len = plen(ip);
+    uint32_t i;
+    for (i= 0;i < len; ++i) {
+        fprintf(stderr, "%02x", pair_ind(&ip, i));
+    }
+}
+int eq(InputPair a, InputPair b) {
+    uint32_t i, alen = a.first_len + a.second_len;
+    if (alen != b.first_len + b.second_len) {
+        return 0;
+    }
+    for (i = 0; i < alen; ++i) {
+        if (pair_ind(&a, i) != pair_ind(&b, i)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+size_t window_size_from_lgwin(int32_t lgwin) {
+    size_t retval = 1;
+    retval <<= lgwin;
+    retval -= 16;
+    return retval;
+}
+    
+size_t cmp_min(size_t a, size_t b) {
+    return a< b ? a : b;
+}
+
+typedef struct UsizeIsizeX {
+    size_t first;
+    ptrdiff_t second;
+} UsizeIsize;
+
+// returns which distance code to use ( 0 means none, 1 means last, 2 means penultimate, 3 means the prior to penultimate and 45 
+UsizeIsize CommandDistanceIndexAndOffset(Command *cmd,
+                                        uint32_t n_postfix,
+                                        uint32_t n_direct) {
+   
+    uint32_t dextra = cmd->dist_extra_ & 0xffffff;
+    if (cmd->dist_prefix_ < 16) {
+        UsizeIsize table[16] ={{1,0}, {2,0},{3,0},{4,0},
+                                        {1,-1}, {1, 1}, {1,-2}, {1,2},{1,-3},{1,3},
+                               {2,-1},{2,1},{2,-2},{2,2},{2,-3},{2,3}};
+        return table[cmd->dist_prefix_];
+    }
+    if ((cmd->dist_prefix_) < 16 + n_direct) {
+        UsizeIsize retval;
+            retval.first = 0;
+            retval.second = (ptrdiff_t)cmd->dist_prefix_ - 16;
+        return retval;
+    }
+    uint32_t postfix_mask = (1 << n_postfix) - 1;
+    uint32_t dcode = cmd->dist_prefix_ - 16 - n_direct;
+    uint32_t n_dist_bits = 1 + (dcode >> (n_postfix + 1));
+
+    uint32_t hcode = dcode >> n_postfix;
+    uint32_t lcode = dcode & postfix_mask;
+    uint32_t offset = ((2 + (hcode & 1)) << n_dist_bits) - 4;
+
+    UsizeIsize retval;
+    retval.first = 0;
+    retval.second = (((offset + dextra) << n_postfix) + lcode + n_direct + 1);
+    return retval;
+}
+    
+#define kNumDistanceCacheEntries 4
+void LogMetaBlock(Command*commands, uint32_t n_commands,
+                  uint8_t *input0, uint32_t input0_len,
+                  uint8_t *input1, uint32_t input1_len,
+                  uint32_t n_postfix, uint32_t n_direct,
+                  int32_t dist_cache[kNumDistanceCacheEntries],
+                  RecoderState* recoder_state,
+                  //MetaBlockSplitRefs block_type,
+                  int32_t lgwin) {
+#ifdef LOG_META_BLOCK
+    size_t window_size = window_size_from_lgwin(lgwin);
+    uint32_t mb_len = input0_len + input1_len, cmd_index = 0;
+    fprintf(stderr, "window %d len %d nbltypesl %d nbltypesi %d nbltypesd %d\n",
+            lgwin, mb_len,
+#if DO_BLOCK_TYPE
+            block_type.btypel.num_types,
+            block_type.btypec.num_types,
+            block_type.btyped.num_types
+#else
+            0,0,0/**/
+#endif
+        );
+    InputPair input;
+    input.first = input0;
+    input.first_len = input0_len;
+    input.second = input1;
+    input.second_len = input1_len;
+    InputPair input_iter = input;
+    uint32_t local_dist_cache[kNumDistanceCacheEntries] = {0};
+    memcpy(local_dist_cache, dist_cache, sizeof(local_dist_cache));
+    size_t btypel_counter = 0,
+        btypec_counter = 0,
+        btyped_counter = 0;
+//    btypel_sub = block_type.
+    //FIXME
+#if DO_BLOCK_TYPE
+    let mut btypel_sub = if block_type.btypel.num_types == 1 { 1u32<<31 } else {block_type.btypel.lengths[0]};
+    let mut btypec_sub = if block_type.btypec.num_types == 1 { 1u32<<31 } else {block_type.btypec.lengths[0]};
+    let mut btyped_sub = if block_type.btyped.num_types == 1 { 1u32<<31 } else {block_type.btyped.lengths[0]};
+#endif
+    for (cmd_index = 0; cmd_index < n_commands; ++cmd_index) {
+        Command cmd = commands[cmd_index];
+        InputPairPair inserts_interim = split_at(input_iter,
+                                                 cmp_min(cmd.insert_len_,
+                                                         mb_len));
+        InputPair inserts = inserts_interim.first;
+        InputPair interim = inserts_interim.second;
+        recoder_state->num_bytes_encoded += plen(inserts);
+        uint32_t _copy_cursor = plen(input) - plen(interim);
+        uint32_t distance_context = CommandDistanceContext(&cmd);
+        uint32_t copylen_code = CommandCopyLenCode(&cmd);
+        UsizeIsize prev_dist_index_dist_offset = CommandDistanceIndexAndOffset(&cmd, n_postfix, n_direct);
+        uint32_t prev_dist_index = prev_dist_index_dist_offset.first;
+        uint32_t dist_offset = prev_dist_index_dist_offset.second;
+        size_t final_distance;
+        if (prev_dist_index == 0) {
+            final_distance = dist_offset;
+        } else {
+            final_distance = (local_dist_cache[prev_dist_index - 1] + dist_offset);
+        }
+        uint32_t copy_len = copylen_code;
+        size_t actual_copy_len;
+        uint32_t max_distance = cmp_min(recoder_state->num_bytes_encoded, window_size);
+        assert(plen(inserts) <= mb_len);
+#if DO_BLOCK_TYPE
+        {
+            btypec_sub -= 1;
+            if btypec_sub == 0 {
+                btypec_counter += 1;
+                if block_type.btypec.types.len() > btypec_counter {
+                    btypec_sub = block_type.btypec.lengths[btypec_counter];
+                    println_stderr!("ctype {:}",
+                                    block_type.btypec.types[btypec_counter]);
+                } else {
+                    btypec_sub = 1u32 << 31;
+                }
+            }
+        }
+#endif
+        if (plen(inserts) != 0) {
+            InputPair tmp_inserts = inserts;
+#if DO_BLOCK_TYPE
+            while (plen(tmp_inserts) > btypel_sub) {
+                // we have to divide some:
+                let (in_a, in_b) = tmp_inserts.split_at(btypel_sub as usize);
+                if in_a.len() != 0 {
+                    println_stderr!("insert {:} {:x}",
+                                    in_a.len(),
+                                    in_a);
+                }
+                mb_len -= in_a.len();
+                tmp_inserts = in_b;
+                btypel_counter += 1;
+                if block_type.btypel.types.len() > btypel_counter {
+                    btypel_sub = block_type.btypel.lengths[btypel_counter];
+                    println_stderr!("ltype {:}",
+                                    block_type.btypel.types[btypel_counter]);
+                } else {
+                    btypel_sub = 1u32<<31;
+                }
+            }
+#endif
+            if (plen(tmp_inserts) != 0) {
+                fprintf(stderr,"insert %d",
+                       plen(tmp_inserts));
+                print_hex(stderr, tmp_inserts);
+                fprintf(stderr, "\n");
+                mb_len -= plen(tmp_inserts);
+                #if DO_BLOCK_TYPE
+                btypel_sub -= plen(tmp_inserts);
+                #endif
+            }
+        }
+#if DO_BLOCK_TYPE
+        if (copy_len != 0 && cmd.cmd_prefix_ >= 128) {
+            btyped_sub -= 1;
+            if (btyped_sub == 0) {
+                btyped_counter += 1;
+                if (block_type.btyped.types.len() > btyped_counter) {
+                    btyped_sub = block_type.btyped.lengths[btyped_counter];
+                    printf(stderr,"dtype {:}\n",
+                                    block_type.1btyped.types[btyped_counter]);
+                } else {
+                    btyped_sub = 1u32 << 31;
+                }
+            }
+        }
+#endif
+        if (final_distance > max_distance) { // is dictionary
+            assert(copy_len >= 4);
+            assert(copy_len < 25);
+            const BrotliDictionary *dict = BrotliGetDictionary();
+            size_t dictionary_offset = final_distance - max_distance - 1;
+            size_t ndbits = dict->size_bits_by_length[copy_len];
+            size_t action = dictionary_offset >> ndbits;
+            size_t word_sub_index = dictionary_offset & ((1 << ndbits) - 1);
+            size_t word_index = word_sub_index * copy_len + dict->offsets_by_length[copy_len];
+            const  uint8_t *raw_word = &dict->data[word_index];
+            size_t raw_word_len = copy_len;
+            uint8_t transformed_word[38] = {0};
+            actual_copy_len = TransformDictionaryWord(transformed_word,
+                                                      raw_word,
+                                                      copy_len,
+                                                      action);
+            if (actual_copy_len <= mb_len) {
+                fprintf(stderr, "dict %d word %d,%d ",
+                        (int)actual_copy_len,
+                        (int)copy_len, (int)word_sub_index
+                    );
+                print_hex(stderr, from_ptr_len((uint8_t*)raw_word, raw_word_len));
+                fprintf(stderr, " func %d ", (int)action);
+                print_hex(stderr, from_ptr_len(transformed_word, actual_copy_len));
+                fprintf(stderr, " ctx %d\n", distance_context);
+                mb_len -= actual_copy_len;
+                //assert(InputPair(transformed_word.split_at(actual_copy_len).0, &[]) 
+                //           interim.split_at(actual_copy_len).0);
+            } else if (mb_len != 0) {
+                // truncated dictionary word: represent it as literals instead
+                fprintf(stderr, "insert %d ", mb_len);
+                print_hex(stderr, from_ptr_len(transformed_word, mb_len));
+                fprintf(stderr, "\n");
+                mb_len = 0;
+                //assert_eq!(InputPair(transformed_word.split_at(mb_len).0, &[]),
+                //           interim.split_at(mb_len).0);
+            }
+        } else {
+            actual_copy_len = cmp_min(mb_len, copy_len);
+            if (actual_copy_len != 0) {
+                fprintf(stderr,"copy %d from %d ctx %d\n",
+                        (int)actual_copy_len, (int)final_distance, (int)distance_context);
+            }
+            mb_len -= actual_copy_len;
+            if (prev_dist_index != 1 || dist_offset != 0) { // update distance cache unless it's the "0 distance symbol"
+                int32_t tmp_dist_cache[kNumDistanceCacheEntries - 1] = {0};
+                memcpy(tmp_dist_cache, &local_dist_cache, sizeof(tmp_dist_cache));
+                memcpy(&local_dist_cache[1],
+                       &tmp_dist_cache, sizeof(tmp_dist_cache));
+               local_dist_cache[0] = final_distance;
+            }
+        }
+        InputPairPair copied_remainder = split_at(interim, actual_copy_len);
+        recoder_state->num_bytes_encoded += plen(copied_remainder.first);
+        input_iter = copied_remainder.second;
+    }
+#endif
+}
+                  
+
+
+
+
+    
 #define MAX_HUFFMAN_TREE_SIZE (2 * BROTLI_NUM_COMMAND_SYMBOLS + 1)
 /* The size of Huffman dictionary for distances assuming that NPOSTFIX = 0 and
  NDIRECT = 0. */
@@ -1298,6 +1644,7 @@ void BrotliStoreUncompressedMetaBlock(BROTLI_BOOL is_final_block,
                                       size_t len,
                                       size_t * BROTLI_RESTRICT storage_ix,
                                       uint8_t * BROTLI_RESTRICT storage) {
+  InputPair ip = InputPairFromMaskedInput(input, position, len, mask);
   size_t masked_pos = position & mask;
   BrotliStoreUncompressedMetaBlockHeader(len, storage_ix, storage);
   JumpToByteBoundary(storage_ix, storage);
@@ -1311,7 +1658,12 @@ void BrotliStoreUncompressedMetaBlock(BROTLI_BOOL is_final_block,
   }
   memcpy(&storage[*storage_ix >> 3], &input[masked_pos], len);
   *storage_ix += len << 3;
-
+  /*
+  LogMetaBlock(NULL, 0,
+               ip.first, ip.first_len,
+               ip.second, ip.second_len,
+               0, 0, zero, recoder_state
+  */
   /* We need to clear the next 4 bytes to continue to be
      compatible with BrotliWriteBits. */
   BrotliWriteBitsPrepareStorage(*storage_ix, storage);
