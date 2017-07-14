@@ -110,6 +110,7 @@ typedef struct BrotliEncoderStateStruct {
 
   BROTLI_BOOL is_last_block_emitted_;
   BROTLI_BOOL is_initialized_;
+  RecoderState recoder_state;
 } BrotliEncoderStateStruct;
 
 static BROTLI_BOOL EnsureInitialized(BrotliEncoderState* s);
@@ -537,6 +538,7 @@ static void WriteMetaBlockInternal(MemoryManager* m,
                                    Command* commands,
                                    const int* saved_dist_cache,
                                    int* dist_cache,
+                                   RecoderState*recoder_state,
                                    size_t* storage_ix,
                                    uint8_t* storage) {
   const uint32_t wrapped_last_flush_pos = WrapPosition(last_flush_pos);
@@ -558,7 +560,8 @@ static void WriteMetaBlockInternal(MemoryManager* m,
        CreateBackwardReferences is now unused. */
     memcpy(dist_cache, saved_dist_cache, 4 * sizeof(dist_cache[0]));
     BrotliStoreUncompressedMetaBlock(is_last, data,
-                                     wrapped_last_flush_pos, mask, bytes,
+                                     wrapped_last_flush_pos, mask, params, bytes,
+                                     recoder_state,
                                      storage_ix, storage);
     return;
   }
@@ -576,14 +579,17 @@ static void WriteMetaBlockInternal(MemoryManager* m,
   }
   if (params->quality <= MAX_QUALITY_FOR_STATIC_ENTROPY_CODES) {
     BrotliStoreMetaBlockFast(m, data, wrapped_last_flush_pos,
-                             bytes, mask, is_last,
+                             bytes, mask, params, is_last,
+                             saved_dist_cache,
                              commands, num_commands,
+                             recoder_state,
                              storage_ix, storage);
     if (BROTLI_IS_OOM(m)) return;
   } else if (params->quality < MIN_QUALITY_FOR_BLOCK_SPLIT) {
     BrotliStoreMetaBlockTrivial(m, data, wrapped_last_flush_pos,
-                                bytes, mask, is_last,
-                                commands, num_commands,
+                                bytes, mask, params, is_last,
+                                saved_dist_cache, commands, num_commands,
+                                recoder_state,
                                 storage_ix, storage);
     if (BROTLI_IS_OOM(m)) return;
   } else {
@@ -621,13 +627,16 @@ static void WriteMetaBlockInternal(MemoryManager* m,
                                &mb);
     }
     BrotliStoreMetaBlock(m, data, wrapped_last_flush_pos, bytes, mask,
+                         params,
                          prev_byte, prev_byte2,
                          is_last,
                          num_direct_distance_codes,
                          distance_postfix_bits,
                          literal_context_mode,
+                         saved_dist_cache,
                          commands, num_commands,
                          &mb,
+                         recoder_state,
                          storage_ix, storage);
     if (BROTLI_IS_OOM(m)) return;
     DestroyMetaBlockSplit(m, &mb);
@@ -639,14 +648,15 @@ static void WriteMetaBlockInternal(MemoryManager* m,
     *storage_ix = last_byte_bits;
     BrotliStoreUncompressedMetaBlock(is_last, data,
                                      wrapped_last_flush_pos, mask,
-                                     bytes, storage_ix, storage);
+                                     params,
+                                     bytes, recoder_state, storage_ix, storage);
   }
 }
 
 static BROTLI_BOOL EnsureInitialized(BrotliEncoderState* s) {
   if (BROTLI_IS_OOM(&s->memory_manager_)) return BROTLI_FALSE;
   if (s->is_initialized_) return BROTLI_TRUE;
-
+  s->recoder_state.num_bytes_encoded = 0;
   SanitizeParams(&s->params);
   s->params.lgblock = ComputeLgBlock(&s->params);
 
@@ -1057,7 +1067,7 @@ static BROTLI_BOOL EncodeData(
         m, data, mask, s->last_flush_pos_, metablock_size, is_last,
         &s->params, s->prev_byte_, s->prev_byte2_,
         s->num_literals_, s->num_commands_, s->commands_, s->saved_dist_cache_,
-        s->dist_cache_, &storage_ix, storage);
+        s->dist_cache_, &s->recoder_state, &storage_ix, storage);
     if (BROTLI_IS_OOM(m)) return BROTLI_FALSE;
     s->last_byte_ = storage[storage_ix >> 3];
     s->last_byte_bits_ = storage_ix & 7u;
@@ -1147,7 +1157,7 @@ static BROTLI_BOOL BrotliCompressBufferQuality10(
   SanitizeParams(&params);
   params.lgblock = ComputeLgBlock(&params);
   max_block_size = (size_t)1 << params.lgblock;
-
+  RecoderState recoder_state = {0};
   BrotliInitMemoryManager(m, 0, 0, 0);
 
   assert(input_size <= mask + 1);
@@ -1244,7 +1254,8 @@ static BROTLI_BOOL BrotliCompressBufferQuality10(
       if (BROTLI_IS_OOM(m)) goto oom;
       storage[0] = last_byte;
       BrotliStoreUncompressedMetaBlock(is_last, input_buffer,
-                                       metablock_start, mask, metablock_size,
+                                       metablock_start, mask, &params, metablock_size,
+                                       &recoder_state,
                                        &storage_ix, storage);
     } else {
       uint32_t num_direct_distance_codes = 0;
@@ -1269,13 +1280,15 @@ static BROTLI_BOOL BrotliCompressBufferQuality10(
       if (BROTLI_IS_OOM(m)) goto oom;
       storage[0] = last_byte;
       BrotliStoreMetaBlock(m, input_buffer, metablock_start, metablock_size,
-                           mask, prev_byte, prev_byte2,
+                           mask, &params, prev_byte, prev_byte2,
                            is_last,
                            num_direct_distance_codes,
                            distance_postfix_bits,
                            literal_context_mode,
+                           saved_dist_cache,
                            commands, num_commands,
                            &mb,
+                           &recoder_state,
                            &storage_ix, storage);
       if (BROTLI_IS_OOM(m)) goto oom;
       if (metablock_size + 4 < (storage_ix >> 3)) {
@@ -1284,8 +1297,8 @@ static BROTLI_BOOL BrotliCompressBufferQuality10(
         storage[0] = last_byte;
         storage_ix = last_byte_bits;
         BrotliStoreUncompressedMetaBlock(is_last, input_buffer,
-                                         metablock_start, mask,
-                                         metablock_size, &storage_ix, storage);
+                                         metablock_start, mask, &params,
+                                         metablock_size, &recoder_state, &storage_ix, storage);
       }
       DestroyMetaBlockSplit(m, &mb);
     }

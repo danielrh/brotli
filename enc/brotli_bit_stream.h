@@ -27,6 +27,9 @@
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
 #endif
+typedef struct RecoderStateX {
+    size_t num_bytes_encoded;
+} RecoderState;
 
 /* All Store functions here will use a storage_ix, which is always the bit
    position for the current storage. */
@@ -46,15 +49,18 @@ BROTLI_INTERNAL void BrotliStoreMetaBlock(MemoryManager* m,
                                           size_t start_pos,
                                           size_t length,
                                           size_t mask,
+                                          const BrotliEncoderParams *params,
                                           uint8_t prev_byte,
                                           uint8_t prev_byte2,
                                           BROTLI_BOOL is_final_block,
                                           uint32_t num_direct_distance_codes,
                                           uint32_t distance_postfix_bits,
                                           ContextType literal_context_mode,
+                                          const int32_t *distance_cache,
                                           const Command* commands,
                                           size_t n_commands,
                                           const MetaBlockSplit* mb,
+                                          RecoderState *recoder_state,
                                           size_t* storage_ix,
                                           uint8_t* storage);
 
@@ -67,9 +73,12 @@ BROTLI_INTERNAL void BrotliStoreMetaBlockTrivial(MemoryManager* m,
                                                  size_t start_pos,
                                                  size_t length,
                                                  size_t mask,
+                                                 const BrotliEncoderParams *params,
                                                  BROTLI_BOOL is_last,
+                                                 const int32_t *distance_cache,
                                                  const Command *commands,
                                                  size_t n_commands,
+                                                 RecoderState *recoder_state,
                                                  size_t* storage_ix,
                                                  uint8_t* storage);
 
@@ -82,9 +91,12 @@ BROTLI_INTERNAL void BrotliStoreMetaBlockFast(MemoryManager* m,
                                               size_t start_pos,
                                               size_t length,
                                               size_t mask,
+                                              const BrotliEncoderParams *params,
                                               BROTLI_BOOL is_last,
+                                              const int32_t *distance_cache,
                                               const Command *commands,
                                               size_t n_commands,
+                                              RecoderState *recoder_state,
                                               size_t* storage_ix,
                                               uint8_t* storage);
 
@@ -94,7 +106,8 @@ BROTLI_INTERNAL void BrotliStoreMetaBlockFast(MemoryManager* m,
    REQUIRES: length <= (1 << 24) */
 BROTLI_INTERNAL void BrotliStoreUncompressedMetaBlock(
     BROTLI_BOOL is_final_block, const uint8_t* input, size_t position,
-    size_t mask, size_t len, size_t* storage_ix, uint8_t* storage);
+    size_t mask, const BrotliEncoderParams * params,size_t len, RecoderState *recoder_state,
+    size_t* storage_ix, uint8_t* storage);
 
 /* Stores an empty metadata meta-block and syncs to a byte boundary. */
 BROTLI_INTERNAL void BrotliStoreSyncMetaBlock(size_t* storage_ix,

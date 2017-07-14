@@ -29,10 +29,46 @@ extern "C" {
 #endif
 #define LOG_META_BLOCK
 
+typedef struct BlockSplitRefX {
+    uint8_t *types;
+    uint32_t*lengths;
+    uint32_t num_types;
+    uint32_t num_blocks;
+} BlockSplitRef;
 
-typedef struct RecoderStateX {
-    size_t num_bytes_encoded;
-} RecoderState;
+typedef struct MetaBlockSplitRefsX {
+    BlockSplitRef btypel;
+    BlockSplitRef btypec;
+    BlockSplitRef btyped;
+} MetaBlockSplitRefs;
+
+MetaBlockSplitRefs block_split_nop() {
+    MetaBlockSplitRefs retval;
+    memset(&retval, 0, sizeof(retval));
+    retval.btypel.num_types = 1;
+    retval.btypec.num_types = 1;
+    retval.btyped.num_types = 1;
+    return retval;
+}
+MetaBlockSplitRefs block_split_reference(const MetaBlockSplit *mb) {
+    MetaBlockSplitRefs retval;
+    retval.btypel.types = mb->literal_split.types;
+    retval.btypel.lengths = mb->literal_split.lengths;
+    retval.btypel.num_types = mb->literal_split.num_types;
+    retval.btypel.num_blocks = mb->literal_split.num_blocks;
+    
+    retval.btypec.types = mb->command_split.types;
+    retval.btypec.lengths = mb->command_split.lengths;
+    retval.btypec.num_types = mb->command_split.num_types;
+    retval.btypec.num_blocks = mb->command_split.num_blocks;
+    
+    retval.btyped.types = mb->distance_split.types;
+    retval.btyped.lengths = mb->distance_split.lengths;
+    retval.btyped.num_types = mb->distance_split.num_types;
+    retval.btyped.num_blocks = mb->distance_split.num_blocks;
+    
+    return retval;
+}
 
 typedef struct InputPairX {
     const uint8_t *first;
@@ -181,13 +217,13 @@ UsizeIsize CommandDistanceIndexAndOffset(Command *cmd,
 }
     
 #define kNumDistanceCacheEntries 4
-void LogMetaBlock(Command*commands, uint32_t n_commands,
-                  uint8_t *input0, uint32_t input0_len,
-                  uint8_t *input1, uint32_t input1_len,
+void LogMetaBlock(const Command*commands, uint32_t n_commands,
+                  const uint8_t *input0, uint32_t input0_len,
+                  const uint8_t *input1, uint32_t input1_len,
                   uint32_t n_postfix, uint32_t n_direct,
-                  int32_t dist_cache[kNumDistanceCacheEntries],
+                  const int32_t *dist_cache,
                   RecoderState* recoder_state,
-                  //MetaBlockSplitRefs block_type,
+                  MetaBlockSplitRefs block_type,
                   int32_t lgwin) {
 #ifdef LOG_META_BLOCK
     size_t window_size = window_size_from_lgwin(lgwin);
@@ -215,11 +251,9 @@ void LogMetaBlock(Command*commands, uint32_t n_commands,
         btyped_counter = 0;
 //    btypel_sub = block_type.
     //FIXME
-#if DO_BLOCK_TYPE
-    let mut btypel_sub = if block_type.btypel.num_types == 1 { 1u32<<31 } else {block_type.btypel.lengths[0]};
-    let mut btypec_sub = if block_type.btypec.num_types == 1 { 1u32<<31 } else {block_type.btypec.lengths[0]};
-    let mut btyped_sub = if block_type.btyped.num_types == 1 { 1u32<<31 } else {block_type.btyped.lengths[0]};
-#endif
+    uint32_t btypel_sub = block_type.btypel.num_types == 1 ? (1U<<31) :block_type.btypel.lengths[0];
+    uint32_t btypec_sub = block_type.btypec.num_types == 1 ? (1U<<31) :block_type.btypec.lengths[0];
+    uint32_t btyped_sub = block_type.btyped.num_types == 1 ? (1U<<31) :block_type.btyped.lengths[0];
     for (cmd_index = 0; cmd_index < n_commands; ++cmd_index) {
         Command cmd = commands[cmd_index];
         InputPairPair inserts_interim = split_at(input_iter,
@@ -244,70 +278,62 @@ void LogMetaBlock(Command*commands, uint32_t n_commands,
         size_t actual_copy_len;
         uint32_t max_distance = cmp_min(recoder_state->num_bytes_encoded, window_size);
         assert(plen(inserts) <= mb_len);
-#if DO_BLOCK_TYPE
         {
             btypec_sub -= 1;
-            if btypec_sub == 0 {
+            if (btypec_sub == 0) {
                 btypec_counter += 1;
-                if block_type.btypec.types.len() > btypec_counter {
+                if (block_type.btypec.num_blocks > btypec_counter) {
                     btypec_sub = block_type.btypec.lengths[btypec_counter];
-                    println_stderr!("ctype {:}",
+                    fprintf(stderr, "ctype %d\n",
                                     block_type.btypec.types[btypec_counter]);
                 } else {
-                    btypec_sub = 1u32 << 31;
+                    btypec_sub = 1U << 31;
                 }
             }
         }
-#endif
         if (plen(inserts) != 0) {
             InputPair tmp_inserts = inserts;
-#if DO_BLOCK_TYPE
             while (plen(tmp_inserts) > btypel_sub) {
                 // we have to divide some:
-                let (in_a, in_b) = tmp_inserts.split_at(btypel_sub as usize);
-                if in_a.len() != 0 {
-                    println_stderr!("insert {:} {:x}",
-                                    in_a.len(),
-                                    in_a);
+                InputPairPair in_ab = split_at(tmp_inserts, btypel_sub);
+                if (plen(in_ab.first) != 0) {
+                    fprintf(stderr, "insert %d ", plen(in_ab.first));
+                    print_hex(stderr, in_ab.first);
+                    fprintf(stderr, "\n");
                 }
-                mb_len -= in_a.len();
-                tmp_inserts = in_b;
+                mb_len -= plen(in_ab.first);
+                tmp_inserts = in_ab.second;
                 btypel_counter += 1;
-                if block_type.btypel.types.len() > btypel_counter {
+                if (block_type.btypel.num_blocks > btypel_counter) {
                     btypel_sub = block_type.btypel.lengths[btypel_counter];
-                    println_stderr!("ltype {:}",
+                    fprintf(stderr, "ltype %d\n",
                                     block_type.btypel.types[btypel_counter]);
                 } else {
-                    btypel_sub = 1u32<<31;
+                    btypel_sub = 1U<<31;
                 }
             }
-#endif
             if (plen(tmp_inserts) != 0) {
-                fprintf(stderr,"insert %d",
+                fprintf(stderr,"insert %d ",
                        plen(tmp_inserts));
                 print_hex(stderr, tmp_inserts);
                 fprintf(stderr, "\n");
                 mb_len -= plen(tmp_inserts);
-                #if DO_BLOCK_TYPE
                 btypel_sub -= plen(tmp_inserts);
-                #endif
             }
         }
-#if DO_BLOCK_TYPE
         if (copy_len != 0 && cmd.cmd_prefix_ >= 128) {
             btyped_sub -= 1;
             if (btyped_sub == 0) {
                 btyped_counter += 1;
-                if (block_type.btyped.types.len() > btyped_counter) {
+                if (block_type.btyped.num_blocks > btyped_counter) {
                     btyped_sub = block_type.btyped.lengths[btyped_counter];
-                    printf(stderr,"dtype {:}\n",
-                                    block_type.1btyped.types[btyped_counter]);
+                    fprintf(stderr,"dtype %d\n",
+                                    block_type.btyped.types[btyped_counter]);
                 } else {
-                    btyped_sub = 1u32 << 31;
+                    btyped_sub = 1U << 31;
                 }
             }
         }
-#endif
         if (final_distance > max_distance) { // is dictionary
             assert(copy_len >= 4);
             assert(copy_len < 25);
@@ -1295,19 +1321,26 @@ void BrotliStoreMetaBlock(MemoryManager* m,
                           size_t start_pos,
                           size_t length,
                           size_t mask,
+                          const BrotliEncoderParams *params,
                           uint8_t prev_byte,
                           uint8_t prev_byte2,
                           BROTLI_BOOL is_last,
                           uint32_t num_direct_distance_codes,
                           uint32_t distance_postfix_bits,
                           ContextType literal_context_mode,
+                          const int32_t *distance_cache,
                           const Command *commands,
                           size_t n_commands,
                           const MetaBlockSplit* mb,
+                          RecoderState *recoder_state,
                           size_t *storage_ix,
                           uint8_t *storage) {
   size_t pos = start_pos;
   size_t i;
+  InputPair input_pair = InputPairFromMaskedInput(input, start_pos, length, mask);
+  LogMetaBlock(commands, n_commands, input_pair.first, input_pair.first_len, input_pair.second, input_pair.second_len,
+               distance_postfix_bits, num_direct_distance_codes, distance_cache,
+               recoder_state, block_split_reference(mb), params->lgwin);
   size_t num_distance_codes =
       BROTLI_NUM_DISTANCE_SHORT_CODES + num_direct_distance_codes +
       (48u << distance_postfix_bits);
@@ -1495,9 +1528,12 @@ void BrotliStoreMetaBlockTrivial(MemoryManager* m,
                                  size_t start_pos,
                                  size_t length,
                                  size_t mask,
+                                 const BrotliEncoderParams *params,
                                  BROTLI_BOOL is_last,
+                                 const int32_t *distance_cache,
                                  const Command *commands,
                                  size_t n_commands,
+                                 RecoderState *recoder_state,
                                  size_t *storage_ix,
                                  uint8_t *storage) {
   HistogramLiteral lit_histo;
@@ -1510,7 +1546,11 @@ void BrotliStoreMetaBlockTrivial(MemoryManager* m,
   uint8_t dist_depth[SIMPLE_DISTANCE_ALPHABET_SIZE];
   uint16_t dist_bits[SIMPLE_DISTANCE_ALPHABET_SIZE];
   HuffmanTree* tree;
-
+  InputPair input_pair = InputPairFromMaskedInput(input, start_pos, length, mask);
+  LogMetaBlock(commands, n_commands,
+               input_pair.first, input_pair.first_len,
+               input_pair.second, input_pair.second_len,
+               0, 0, distance_cache, recoder_state, block_split_nop(), params->lgwin);
   StoreCompressedMetaBlockHeader(is_last, length, storage_ix, storage);
 
   HistogramClearLiteral(&lit_histo);
@@ -1550,11 +1590,18 @@ void BrotliStoreMetaBlockFast(MemoryManager* m,
                               size_t start_pos,
                               size_t length,
                               size_t mask,
+                              const BrotliEncoderParams *params,
                               BROTLI_BOOL is_last,
+                              const int32_t *distance_cache,
                               const Command *commands,
                               size_t n_commands,
+                              RecoderState *recoder_state,
                               size_t *storage_ix,
                               uint8_t *storage) {
+  InputPair input_pair = InputPairFromMaskedInput(input, start_pos, length, mask);
+  LogMetaBlock(commands, n_commands, input_pair.first,  input_pair.first_len,
+               input_pair.second, input_pair.second_len, 0, 0, distance_cache,
+               recoder_state, block_split_nop(), params->lgwin);
   StoreCompressedMetaBlockHeader(is_last, length, storage_ix, storage);
 
   BrotliWriteBits(13, 0, storage_ix, storage);
@@ -1640,8 +1687,9 @@ void BrotliStoreMetaBlockFast(MemoryManager* m,
    bytes-as-bytes). */
 void BrotliStoreUncompressedMetaBlock(BROTLI_BOOL is_final_block,
                                       const uint8_t * BROTLI_RESTRICT input,
-                                      size_t position, size_t mask,
+                                      size_t position, size_t mask, const BrotliEncoderParams * params,
                                       size_t len,
+                                      RecoderState *recoder_state,
                                       size_t * BROTLI_RESTRICT storage_ix,
                                       uint8_t * BROTLI_RESTRICT storage) {
   InputPair ip = InputPairFromMaskedInput(input, position, len, mask);
@@ -1658,12 +1706,12 @@ void BrotliStoreUncompressedMetaBlock(BROTLI_BOOL is_final_block,
   }
   memcpy(&storage[*storage_ix >> 3], &input[masked_pos], len);
   *storage_ix += len << 3;
-  /*
+  int32_t zero[kNumDistanceCacheEntries] = {0};
   LogMetaBlock(NULL, 0,
                ip.first, ip.first_len,
                ip.second, ip.second_len,
-               0, 0, zero, recoder_state
-  */
+               0, 0, zero, recoder_state, block_split_nop(),
+               params->lgwin);
   /* We need to clear the next 4 bytes to continue to be
      compatible with BrotliWriteBits. */
   BrotliWriteBitsPrepareStorage(*storage_ix, storage);
